@@ -1,0 +1,260 @@
+syntax = "proto3";
+
+package home.v1;
+
+// EntityState is the KV home_state value for one device.
+message EntityState {
+  // Stable id, "light.kitchen". Also the KV key.
+  string id = 1;
+  // Name shown on the panel.
+  string name = 2;
+  // Room or area, "kitchen".
+  string area = 3;
+  // False when the device is offline. The tile dims and taps show why.
+  bool available = 4;
+  // Backend clock when this state was written.
+  int64 updated_unix_ms = 5;
+  oneof state {
+    LightState light = 10;
+    OnOffState on_off = 11;
+    ClimateState climate = 12;
+    SensorState sensor = 13;
+    LockState lock = 14;
+    CoverState cover = 15;
+    SceneState scene = 16;
+  }
+}
+
+// LightState is a dimmable light. Color fields are optional.
+message LightState {
+  bool on = 1;
+  // Brightness from 0 to 100.
+  uint32 brightness_pct = 2;
+  optional uint32 color_temp_k = 3;
+  optional Rgb rgb = 4;
+}
+
+// Rgb is an optional light color.
+message Rgb {
+  uint32 r = 1;
+  uint32 g = 2;
+  uint32 b = 3;
+}
+
+// OnOffState is a binary switch.
+message OnOffState {
+  bool on = 1;
+}
+
+// ClimateState is a thermostat reading and setpoint.
+message ClimateState {
+  double current_temp = 1;
+  double target_temp = 2;
+  TempUnit unit = 3;
+  HvacMode mode = 4;
+  // What the equipment is doing right now.
+  HvacAction action = 5;
+}
+
+// TempUnit selects Fahrenheit or Celsius.
+enum TempUnit {
+  TEMP_UNIT_UNSPECIFIED = 0;
+  FAHRENHEIT = 1;
+  CELSIUS = 2;
+}
+
+// HvacMode is the selected operating mode.
+enum HvacMode {
+  HVAC_MODE_UNSPECIFIED = 0;
+  OFF = 1;
+  HEAT = 2;
+  COOL = 3;
+  AUTO = 4;
+}
+
+// HvacAction is the equipment's current action.
+enum HvacAction {
+  HVAC_ACTION_UNSPECIFIED = 0;
+  IDLE = 1;
+  HEATING = 2;
+  COOLING = 3;
+}
+
+// SensorState is a single numeric reading.
+message SensorState {
+  double value = 1;
+  string unit = 2;
+}
+
+// LockState is a door or window lock.
+message LockState {
+  // State is the bolt position.
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    LOCKED = 1;
+    UNLOCKED = 2;
+    JAMMED = 3;
+  }
+  State state = 1;
+}
+
+// CoverState is a shade or garage door position.
+message CoverState {
+  uint32 position_pct = 1;
+}
+
+// SceneState records the last activation time.
+message SceneState {
+  int64 last_activated_unix_ms = 1;
+}
+
+// Command is the request body on cmd.<domain>.<id>.
+message Command {
+  // UUIDv7. The backend dedupes this for 10 seconds.
+  string command_id = 1;
+  string entity_id = 2;
+  string screen_id = 3;
+  // Present only for gated actions. The backend verifies it. Never stored on the screen.
+  optional string pin = 4;
+  oneof action {
+    SetOnOff set_on_off = 10;
+    SetBrightness set_brightness = 11;
+    SetColorTemp set_color_temp = 12;
+    SetTargetTemp set_target_temp = 13;
+    SetHvacMode set_hvac_mode = 14;
+    SetLock set_lock = 15;
+    SetCoverPosition set_cover_position = 16;
+    ActivateScene activate_scene = 17;
+  }
+}
+
+// SetOnOff sets a binary device.
+message SetOnOff {
+  bool on = 1;
+}
+
+// SetBrightness sets an absolute brightness percent.
+message SetBrightness {
+  uint32 pct = 1;
+}
+
+// SetColorTemp sets an absolute color temperature.
+message SetColorTemp {
+  uint32 kelvin = 1;
+}
+
+// SetTargetTemp sets an absolute thermostat setpoint.
+message SetTargetTemp {
+  double value = 1;
+  TempUnit unit = 2;
+}
+
+// SetHvacMode selects a thermostat mode.
+message SetHvacMode {
+  HvacMode mode = 1;
+}
+
+// SetLock locks or unlocks. Unlock is PIN gated.
+message SetLock {
+  bool locked = 1;
+}
+
+// SetCoverPosition sets an absolute cover position.
+message SetCoverPosition {
+  uint32 pct = 1;
+}
+
+// ActivateScene runs a scene once.
+message ActivateScene {}
+
+// CommandResult closes a command request. The KV write is the source of truth.
+message CommandResult {
+  // Status is the outcome of one command.
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    OK = 1;
+    REJECTED = 2;
+    DEVICE_UNAVAILABLE = 3;
+    DEVICE_TIMEOUT = 4;
+    PIN_REQUIRED = 5;
+    PIN_INVALID = 6;
+  }
+  string command_id = 1;
+  Status status = 2;
+  // Shown on the status strip when status is not OK. Must not echo a PIN.
+  string message = 3;
+}
+
+// Event is an alert on evt.<kind>.<source>.
+message Event {
+  // Severity selects how the screen treats the event.
+  enum Severity {
+    SEVERITY_UNSPECIFIED = 0;
+    INFO = 1;
+    WARNING = 2;
+    CRITICAL = 3;
+  }
+  string id = 1;
+  // "doorbell", "leak", "smoke".
+  string kind = 2;
+  string source = 3;
+  // CRITICAL triggers the full-frame red alert.
+  Severity severity = 4;
+  string title = 5;
+  string body = 6;
+  int64 unix_ms = 7;
+}
+
+// ScreenLayout is the KV ui_config value for one screen.
+message ScreenLayout {
+  uint32 schema_version = 1;
+  repeated Panel panels = 2;
+  string home_panel_id = 3;
+}
+
+// Panel is one sidebar destination.
+message Panel {
+  string id = 1;
+  // Sidebar button label.
+  string title = 2;
+  PanelKind kind = 3;
+  repeated string entity_ids = 4;
+  // Theme color token name, for example "accent-1".
+  string accent = 5;
+}
+
+// PanelKind selects the panel's control set.
+enum PanelKind {
+  PANEL_KIND_UNSPECIFIED = 0;
+  LIGHTS = 1;
+  CLIMATE = 2;
+  SECURITY = 3;
+  SENSORS = 4;
+  SCENES = 5;
+  ALERTS = 6;
+}
+
+// BackendHeartbeat is written to home_state key sys.backend every 5 seconds.
+message BackendHeartbeat {
+  string version = 1;
+  int64 unix_ms = 2;
+}
+
+// ScreenHeartbeat is published to ui.<screen_id>.heartbeat every 10 seconds.
+message ScreenHeartbeat {
+  string screen_id = 1;
+  string version = 2;
+  uint64 uptime_s = 3;
+  bool connected = 4;
+  float frame_ms_p99 = 5;
+  float cmd_latency_ms_p95 = 6;
+  float cpu_pct = 7;
+  uint32 rss_mb = 8;
+}
+
+// ScreenError is published to ui.<screen_id>.error on a local fault.
+message ScreenError {
+  string screen_id = 1;
+  string code = 2;
+  string detail = 3;
+}

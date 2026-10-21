@@ -1,0 +1,38 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/home-proto",
+    "crates/lcars-api-proto",
+    "crates/lcars-sync",
+    "crates/lcars-ui",
+    "crates/lcars-app",
+]
+
+[workspace.package]
+edition = "2024"
+publish = false
+rust-version = "1.92"
+version = "0.1.0"
+
+[workspace.dependencies]
+async-nats = "0.50"
+base64 = "0.22"
+bytes = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures = "0.3"
+home-proto = { path = "crates/home-proto" }
+lcars-api-proto = { path = "crates/lcars-api-proto" }
+lcars-sync = { path = "crates/lcars-sync" }
+lcars-ui = { path = "crates/lcars-ui" }
+prost = "0.14.4"
+prost-build = "0.14.4"
+protoc-bin-vendored = "3"
+serde = { version = "1", features = ["derive"] }
+slint = { version = "=1.18.1", default-features = false }
+slint-build = "=1.18.1"
+thiserror = "2"
+tokio = { version = "1.54", features = ["macros", "rt-multi-thread", "sync", "time"] }
+toml = "0.9"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1.28", features = ["v7"] }

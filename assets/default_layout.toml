@@ -1,0 +1,30 @@
+schema_version = 1
+home_panel_id = "lights"
+
+[[panels]]
+id = "lights"
+title = "LIGHTS"
+kind = "lights"
+accent = "accent-1"
+entity_ids = ["light.kitchen", "light.dining"]
+
+[[panels]]
+id = "climate"
+title = "CLIMATE"
+kind = "climate"
+accent = "accent-2"
+entity_ids = ["climate.downstairs"]
+
+[[panels]]
+id = "security"
+title = "SECURITY"
+kind = "security"
+accent = "alert"
+entity_ids = ["lock.front"]
+
+[[panels]]
+id = "scenes"
+title = "SCENES"
+kind = "scenes"
+accent = "accent-4"
+entity_ids = ["scene.evening"]

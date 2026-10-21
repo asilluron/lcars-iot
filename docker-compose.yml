@@ -1,0 +1,24 @@
+version: "2.1"
+services:
+  lcars-ui:
+    build:
+      context: .
+      dockerfile: lcars/Dockerfile
+    restart: always
+    network_mode: host
+    # privileged stays through M3. M4 replaces it with /dev/dri, /dev/input, and /dev/snd.
+    privileged: true
+    devices:
+      - "/dev/snd:/dev/snd"
+    labels:
+      io.balena.update.strategy: download-then-kill
+      io.balena.features.sysfs: "1"
+    environment:
+      UDEV: "1"
+      SLINT_BACKEND: linuxkms-femtovg
+      LCARS_ASSETS: /opt/lcars/assets
+    healthcheck:
+      test: ["CMD-SHELL", "[ $(( $(date +%s) - $(stat -c %Y /run/lcars/heartbeat) )) -lt 10 ]"]
+      interval: 5s
+      retries: 2
+      start_period: 15s

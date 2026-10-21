@@ -1,0 +1,23 @@
+[package]
+name = "lcars-app"
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+async-nats = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+prost = { workspace = true }
+thiserror = { workspace = true }
+home-proto = { workspace = true }
+lcars-api-proto = { workspace = true }
+lcars-sync = { workspace = true }
+lcars-ui = { workspace = true }
+cpal = "0.16"
+rodio = { version = "0.21.1", default-features = false, features = ["playback", "tracing"] }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

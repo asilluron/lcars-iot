@@ -1,0 +1,1074 @@
+import { Theme } from "theme.slint";
+
+export struct DayItem {
+    num: string,
+    name: string,
+    dots: int,
+    count: int,
+    accent: color,
+}
+
+export struct EventItem {
+    day: int,
+    time: string,
+    suffix: string,
+    title: string,
+    detail: string,
+    badge: string,
+    tag: string,
+    lane: string,
+    accent: color,
+}
+
+component Pressable inherits Rectangle {
+    in property <color> accent: Theme.orange;
+    in property <bool> selected: false;
+    in property <bool> dimmed: false;
+    in property <bool> cream-when-selected: false;
+    in property <length> radius: 12px;
+    callback clicked();
+
+    border-radius: root.radius;
+    background: hit.pressed ? root.accent.brighter(0.32) : root.selected && root.cream-when-selected ? Theme.cream : root.selected ? root.accent.brighter(0.18) : root.accent;
+    opacity: root.dimmed ? 0.38 : 1;
+    animate background { duration: 90ms; }
+    animate opacity { duration: 120ms; }
+
+    hit := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => { root.clicked(); }
+    }
+}
+
+component RailButton inherits Pressable {
+    in property <string> index: "";
+    in property <string> label;
+    radius: 12px;
+
+    Text {
+        text: root.index;
+        x: 8px;
+        y: 6px;
+        color: Theme.ink;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    Text {
+        text: root.label;
+        x: 8px;
+        width: parent.width - 16px;
+        y: 18px;
+        height: parent.height - 24px;
+        color: Theme.ink;
+        font-size: 18px;
+        font-weight: 700;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+}
+
+component DayChip inherits Pressable {
+    in property <string> num;
+    in property <string> name;
+    in property <int> dots;
+    radius: 14px;
+
+    Text {
+        text: root.num;
+        x: 8px;
+        y: 6px;
+        color: Theme.ink;
+        font-size: 26px;
+        font-weight: 700;
+    }
+
+    Text {
+        text: root.name;
+        x: 46px;
+        y: 8px;
+        width: parent.width - 54px;
+        color: Theme.ink;
+        font-size: 13px;
+        font-weight: 700;
+        horizontal-alignment: right;
+    }
+
+    HorizontalLayout {
+        x: 48px;
+        y: 30px;
+        width: parent.width - 56px;
+        height: 8px;
+        spacing: 3px;
+        alignment: end;
+        Rectangle { width: 5px; height: 5px; background: Theme.ink; visible: root.dots >= 1; }
+        Rectangle { width: 5px; height: 5px; background: Theme.ink; visible: root.dots >= 2; }
+        Rectangle { width: 5px; height: 5px; background: Theme.ink; visible: root.dots >= 3; }
+        Rectangle { width: 5px; height: 5px; background: Theme.ink; visible: root.dots >= 4; }
+        Rectangle { width: 5px; height: 5px; background: Theme.ink; visible: root.dots >= 5; }
+    }
+}
+
+component EventRow inherits Rectangle {
+    in property <EventItem> event;
+    in property <bool> selected: false;
+    callback clicked();
+
+    height: 56px;
+    background: transparent;
+
+    Pressable {
+        x: 0;
+        y: 4px;
+        width: 118px;
+        height: 48px;
+        radius: 24px;
+        accent: root.event.accent;
+        selected: root.selected;
+        clicked => { root.clicked(); }
+
+        Text {
+            text: root.event.time;
+            y: 4px;
+            width: 100%;
+            horizontal-alignment: center;
+            color: Theme.ink;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        Text {
+            text: root.event.suffix;
+            y: 28px;
+            width: 100%;
+            horizontal-alignment: center;
+            color: Theme.ink;
+            font-size: 11px;
+            font-weight: 700;
+        }
+    }
+
+    TouchArea {
+        x: 126px;
+        y: 0;
+        width: parent.width - 126px - 86px;
+        height: 100%;
+        clicked => { root.clicked(); }
+
+        Text {
+            text: root.event.title;
+            y: 8px;
+            x: 4px;
+            color: Theme.cream-text;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        Text {
+            text: root.event.detail;
+            y: 30px;
+            x: 4px;
+            width: parent.width - 8px;
+            color: Theme.dim-text;
+            font-size: 12px;
+            overflow: elide;
+        }
+    }
+
+    if root.event.badge != "": Pressable {
+        x: parent.width - 176px;
+        y: 14px;
+        width: 78px;
+        height: 26px;
+        radius: 13px;
+        accent: Theme.gold;
+        clicked => { root.clicked(); }
+
+        Text {
+            text: root.event.badge;
+            width: 100%;
+            height: 100%;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            color: Theme.ink;
+            font-size: 11px;
+            font-weight: 700;
+        }
+    }
+
+    Pressable {
+        x: parent.width - 84px;
+        y: 8px;
+        width: 84px;
+        height: 40px;
+        radius: 20px;
+        accent: root.event.accent;
+        selected: root.selected;
+        clicked => { root.clicked(); }
+
+        Text {
+            text: root.event.tag;
+            width: 100%;
+            height: 100%;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            color: Theme.ink;
+            font-size: 12px;
+            font-weight: 700;
+        }
+    }
+}
+
+component TodoRow inherits Rectangle {
+    in property <string> title;
+    in property <string> detail;
+    in property <color> accent: Theme.purple;
+    in property <bool> done: false;
+    callback clicked();
+
+    height: 56px;
+
+    Pressable {
+        x: 0;
+        y: 6px;
+        width: root.done ? 64px : 48px;
+        height: 44px;
+        radius: 22px;
+        accent: root.done ? Theme.done : Theme.mute;
+        clicked => { root.clicked(); }
+
+        if root.done: Text {
+            text: "DONE";
+            width: 100%;
+            height: 100%;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            color: Theme.ink;
+            font-size: 12px;
+            font-weight: 700;
+        }
+    }
+
+    TouchArea {
+        x: 72px;
+        width: parent.width - 96px;
+        height: 100%;
+        clicked => { root.clicked(); }
+
+        Text {
+            text: root.title;
+            y: 8px;
+            color: root.done ? Theme.dim-text : Theme.cream-text;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        Text {
+            text: root.detail;
+            y: 30px;
+            color: Theme.dim-text;
+            font-size: 12px;
+        }
+    }
+
+    Pressable {
+        x: parent.width - 18px;
+        y: 6px;
+        width: 18px;
+        height: 44px;
+        radius: 9px;
+        accent: root.accent;
+        clicked => { root.clicked(); }
+    }
+}
+
+component ElbowMark inherits Rectangle {
+    callback clicked();
+    background: transparent;
+
+    Rectangle {
+        x: 12px;
+        y: 0px;
+        width: 128px;
+        height: 48px;
+        background: Theme.orange;
+    }
+
+    Path {
+        y: 36px;
+        width: 220px;
+        height: 52px;
+        fill: Theme.orange;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 220;
+        viewbox-height: 52;
+        MoveTo { x: 0; y: 0; }
+        LineTo { x: 128; y: 0; }
+        LineTo { x: 128; y: 8; }
+        LineTo { x: 208; y: 12; }
+        LineTo { x: 208; y: 44; }
+        LineTo { x: 40; y: 50; }
+        LineTo { x: 16; y: 36; }
+        LineTo { x: 8; y: 18; }
+        Close {}
+    }
+
+    Path {
+        y: 88px;
+        width: 220px;
+        height: 48px;
+        fill: Theme.orange;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 220;
+        viewbox-height: 48;
+        MoveTo { x: 40; y: 2; }
+        LineTo { x: 208; y: 0; }
+        LineTo { x: 208; y: 32; }
+        LineTo { x: 128; y: 36; }
+        LineTo { x: 128; y: 48; }
+        LineTo { x: 0; y: 48; }
+        LineTo { x: 0; y: 28; }
+        LineTo { x: 12; y: 12; }
+        Close {}
+    }
+
+    Rectangle {
+        x: 12px;
+        y: 124px;
+        width: 128px;
+        height: 44px;
+        background: Theme.orange;
+    }
+
+    TouchArea {
+        width: 150px;
+        height: 100%;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component HomeScreen inherits Rectangle {
+    in property <string> clock-hm: "10:42";
+    in property <string> clock-suffix: "AM";
+    in property <string> weekday-name: "WEDNESDAY";
+    in property <string> date-line: "21 OCTOBER 2026";
+    in property <string> now-label: "NOW 10:42 AM";
+    in property <[DayItem]> days;
+    in property <[string]> day-heads;
+    in property <[string]> all-day-labels;
+    in property <[EventItem]> events;
+    in property <string> sync-label: "LOCAL";
+    in property <string> week-label: "WEEK";
+    callback pressed(string);
+
+    background: Theme.bg;
+
+    in-out property <int> section: 0;
+    in-out property <bool> display-night: true;
+    in-out property <int> selected-day: 0;
+    in-out property <int> selected-event: 0;
+    in-out property <bool> lane-work: true;
+    in-out property <bool> lane-band: true;
+    in-out property <bool> lane-personal: true;
+    in-out property <bool> lane-house: true;
+    in-out property <bool> all-day-on: true;
+    in-out property <bool> weather-open: false;
+    in-out property <string> notice: "";
+    in-out property <int> climate-mode: 0;
+    in-out property <bool> light-kitchen: true;
+    in-out property <bool> light-dining: false;
+    in-out property <bool> light-porch: true;
+    in-out property <bool> light-hall: false;
+    in-out property <bool> locked: true;
+    in-out property <bool> away: false;
+    in-out property <bool> done-0: false;
+    in-out property <bool> done-1: false;
+    in-out property <bool> done-2: false;
+    in-out property <bool> done-3: true;
+    in-out property <bool> show-diagnostics: false;
+
+    function lane-open(lane: string) -> bool {
+        if (lane == "work") { return root.lane-work; }
+        if (lane == "band") { return root.lane-band; }
+        if (lane == "personal") { return root.lane-personal; }
+        if (lane == "house") { return root.lane-house; }
+        return true;
+    }
+
+    function event-shown(index: int) -> bool {
+        if (index < 0 || index >= root.events.length) { return false; }
+        return root.events[index].day == root.selected-day && root.lane-open(root.events[index].lane);
+    }
+
+    function open-todos() -> int {
+        (root.done-0 ? 0 : 1) + (root.done-1 ? 0 : 1) + (root.done-2 ? 0 : 1) + (root.done-3 ? 0 : 1)
+    }
+
+    function done-todos() -> int {
+        4 - root.open-todos()
+    }
+
+    function tag-accent(lane: string) -> color {
+        if (lane == "work") { return Theme.blue; }
+        if (lane == "band") { return Theme.orange; }
+        if (lane == "personal") { return Theme.peach; }
+        return Theme.purple;
+    }
+
+    property <string> banner: root.notice == "" ? root.sync-label : root.notice;
+    property <string> event-count-label: root.days.length == 0 ? "" : root.days[root.selected-day].count + " EVENTS";
+
+    // Left rail
+    RailButton {
+        x: 12px;
+        y: 12px;
+        width: 128px;
+        height: 76px;
+        index: "";
+        label: root.display-night ? "NIGHT" : "DAY";
+        accent: root.display-night ? Theme.blue : Theme.cream;
+        clicked => {
+            root.display-night = !root.display-night;
+            root.notice = root.display-night ? "DISPLAY NIGHT" : "DISPLAY DAY";
+            root.pressed("setting");
+        }
+
+        Text {
+            text: "DISPLAY";
+            x: 8px;
+            y: 8px;
+            width: parent.width - 16px;
+            horizontal-alignment: right;
+            color: Theme.ink;
+            font-size: 12px;
+            font-weight: 700;
+        }
+    }
+
+    ElbowMark {
+        x: 0px;
+        y: 92px;
+        width: 232px;
+        height: 168px;
+        clicked => { root.notice = "FRAME"; root.pressed("alt-3"); }
+    }
+
+    RailButton {
+        x: 12px; y: 260px; width: 128px; height: 68px;
+        index: "01"; label: "CALENDAR";
+        accent: Theme.peach;
+        cream-when-selected: true;
+        selected: root.section == 0;
+        clicked => { root.section = 0; root.notice = "CALENDAR 01"; root.pressed("push"); }
+    }
+    RailButton {
+        x: 12px; y: 332px; width: 128px; height: 68px;
+        index: "02"; label: "CLIMATE";
+        accent: Theme.blue;
+        cream-when-selected: true;
+        selected: root.section == 1;
+        clicked => { root.section = 1; root.notice = "CLIMATE 02"; root.pressed("push-alt"); }
+    }
+    RailButton {
+        x: 12px; y: 404px; width: 128px; height: 68px;
+        index: "03"; label: "LIGHTS";
+        accent: Theme.purple;
+        cream-when-selected: true;
+        selected: root.section == 2;
+        clicked => { root.section = 2; root.notice = "LIGHTS 03"; root.pressed("alt-2"); }
+    }
+    RailButton {
+        x: 12px; y: 476px; width: 128px; height: 66px;
+        index: "04"; label: "SECURITY";
+        accent: Theme.blue;
+        cream-when-selected: true;
+        selected: root.section == 3;
+        clicked => { root.section = 3; root.notice = "SECURITY 04"; root.pressed("confirm"); }
+    }
+    Pressable {
+        x: 12px; y: 548px; width: 128px; height: 40px;
+        radius: 10px;
+        accent: Theme.orange;
+        clicked => { root.show-diagnostics = true; root.pressed("long"); }
+    }
+
+    // Clock and weather
+    Text {
+        x: 156px;
+        y: 4px;
+        text: root.clock-hm;
+        color: Theme.cream-text;
+        font-size: 92px;
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+
+    Text {
+        x: 360px;
+        y: 68px;
+        text: root.clock-suffix;
+        color: Theme.cream-text;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    Text {
+        x: 420px;
+        y: 36px;
+        text: root.weekday-name;
+        color: Theme.orange;
+        font-size: 26px;
+        font-weight: 700;
+    }
+
+    Text {
+        x: 420px;
+        y: 68px;
+        text: root.date-line;
+        color: Theme.cream-text;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    weather := Pressable {
+        x: 760px;
+        y: 16px;
+        width: 252px;
+        height: 96px;
+        radius: 0px;
+        accent: Theme.bg;
+        clicked => {
+            root.weather-open = !root.weather-open;
+            root.notice = root.weather-open ? "OUTSIDE DETAIL" : "OUTSIDE 54°F";
+            root.pressed("chirp");
+        }
+
+        Text {
+            y: 0px;
+            width: 100%;
+            height: 16px;
+            text: "OUTSIDE";
+            horizontal-alignment: right;
+            vertical-alignment: center;
+            color: Theme.cream-text;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        HorizontalLayout {
+            y: 20px;
+            width: 100%;
+            height: 72px;
+            spacing: 8px;
+            alignment: end;
+
+            Rectangle {
+                width: 86px;
+                height: 100%;
+
+                Text {
+                    width: 64px;
+                    height: 100%;
+                    text: "54";
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                    color: Theme.cream-text;
+                    font-size: 52px;
+                    font-weight: 700;
+                }
+
+                Text {
+                    x: 66px;
+                    y: 14px;
+                    width: 20px;
+                    text: "°F";
+                    color: Theme.cream-text;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+            }
+
+            VerticalLayout {
+                width: 148px;
+                height: 100%;
+                alignment: center;
+                spacing: 2px;
+
+                Text {
+                    width: 100%;
+                    text: root.weather-open ? "Feels 51°" : "Partly cloudy";
+                    color: Theme.cream-text;
+                    font-size: 16px;
+                    font-weight: 600;
+                    overflow: elide;
+                }
+
+                Text {
+                    width: 100%;
+                    text: root.weather-open ? "Wind 6 mph" : "High 61 · Low 38 °F";
+                    color: Theme.dim-text;
+                    font-size: 13px;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+
+    if root.section == 0: Rectangle {
+        x: 0px;
+        y: 128px;
+        width: 100%;
+        height: parent.height - 128px;
+        background: transparent;
+
+        Pressable {
+            x: 237px; y: 12px; width: 422px; height: 32px;
+            radius: 8px;
+            accent: Theme.peach;
+            clicked => { root.notice = "TODAY SPAN"; root.pressed("quick"); }
+        }
+        Pressable {
+            x: 664px; y: 12px; width: 118px; height: 32px;
+            radius: 8px;
+            accent: Theme.purple;
+            clicked => { root.notice = "WEEK 43"; root.pressed("alt-2"); }
+            Text {
+                text: root.week-label;
+                width: 100%;
+                height: 100%;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                color: Theme.ink;
+                font-size: 13px;
+                font-weight: 700;
+            }
+        }
+        Pressable {
+            x: 789px; y: 12px; width: 178px; height: 32px;
+            radius: 8px;
+            accent: Theme.orange;
+            clicked => { root.notice = root.notice == "LINK LOCAL" ? "" : "LINK LOCAL"; root.pressed("scan"); }
+            Text {
+                text: root.banner;
+                width: parent.width - 16px;
+                x: 8px;
+                height: 100%;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                color: Theme.ink;
+                font-size: 13px;
+                font-weight: 700;
+            }
+        }
+        Pressable {
+            x: 972px; y: 12px; width: 40px; height: 32px;
+            radius: 8px;
+            accent: Theme.blue;
+            clicked => { root.notice = "CAP 01"; root.pressed("quick"); }
+        }
+
+        Pressable {
+            x: 237px; y: 50px; width: 130px; height: 30px;
+            radius: 8px;
+            accent: Theme.blue;
+            dimmed: !root.lane-work;
+            clicked => { root.lane-work = !root.lane-work; root.notice = root.lane-work ? "WORK ON" : "WORK OFF"; root.pressed("setting"); }
+            Text { text: "WORK"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 13px; font-weight: 700; }
+        }
+        Pressable {
+            x: 372px; y: 50px; width: 131px; height: 30px;
+            radius: 8px;
+            accent: Theme.orange;
+            dimmed: !root.lane-band;
+            clicked => { root.lane-band = !root.lane-band; root.notice = root.lane-band ? "BAND ON" : "BAND OFF"; root.pressed("setting"); }
+            Text { text: "BAND"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 13px; font-weight: 700; }
+        }
+        Pressable {
+            x: 508px; y: 50px; width: 131px; height: 30px;
+            radius: 8px;
+            accent: Theme.peach;
+            dimmed: !root.lane-personal;
+            clicked => { root.lane-personal = !root.lane-personal; root.notice = root.lane-personal ? "PERSONAL ON" : "PERSONAL OFF"; root.pressed("setting"); }
+            Text { text: "PERSONAL"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 13px; font-weight: 700; }
+        }
+        Pressable {
+            x: 644px; y: 50px; width: 131px; height: 30px;
+            radius: 8px;
+            accent: Theme.purple;
+            dimmed: !root.lane-house;
+            clicked => { root.lane-house = !root.lane-house; root.notice = root.lane-house ? "HOUSE ON" : "HOUSE OFF"; root.pressed("setting"); }
+            Text { text: "HOUSE"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 13px; font-weight: 700; }
+        }
+
+        title-hit := TouchArea {
+            x: 790px; y: 44px; width: 220px; height: 40px;
+            clicked => { root.section = 0; root.selected-day = 0; root.notice = "CALENDAR 01"; root.pressed("confirm"); }
+            Text {
+                text: "CALENDAR 01";
+                width: 100%;
+                height: 100%;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                color: title-hit.pressed ? Theme.cream : Theme.orange;
+                font-size: 26px;
+                font-weight: 700;
+            }
+        }
+
+        HorizontalLayout {
+            x: 166px;
+            y: 104px;
+            width: 846px;
+            height: 58px;
+            spacing: 6px;
+
+            for day[index] in root.days: DayChip {
+                width: 110px;
+                num: day.num;
+                name: day.name;
+                dots: day.dots;
+                accent: day.accent;
+                cream-when-selected: true;
+                selected: root.selected-day == index;
+                clicked => {
+                    root.selected-day = index;
+                    root.selected-event = -1;
+                    root.notice = day.name + " " + day.num;
+                    root.pressed("push");
+                }
+            }
+
+            Pressable {
+                width: 28px;
+                radius: 8px;
+                accent: Theme.orange;
+                clicked => {
+                    root.selected-day = Math.mod(root.selected-day + 1, 7);
+                    root.notice = "NEXT DAY";
+                    root.pressed("quick");
+                }
+            }
+        }
+
+        Text {
+            x: 166px;
+            y: 176px;
+            text: "TODAY";
+            color: Theme.orange;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        Text {
+            x: 228px;
+            y: 176px;
+            text: root.day-heads[root.selected-day] + " · " + root.event-count-label;
+            color: Theme.cream-text;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        Pressable {
+            x: 484px; y: 172px; width: 72px; height: 24px;
+            radius: 12px;
+            accent: Theme.purple;
+            dimmed: !root.all-day-on;
+            clicked => {
+                root.all-day-on = !root.all-day-on;
+                root.notice = root.all-day-on ? "ALL DAY" : "ALL DAY HIDDEN";
+                root.pressed("alt-3");
+            }
+            Text {
+                text: "ALL DAY";
+                width: 100%;
+                height: 100%;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                color: Theme.ink;
+                font-size: 10px;
+                font-weight: 700;
+            }
+        }
+        Text {
+            x: 564px;
+            y: 176px;
+            text: root.all-day-on ? root.all-day-labels[root.selected-day] : "";
+            color: Theme.cream-text;
+            font-size: 14px;
+        }
+
+        Rectangle {
+            x: 289px;
+            y: 206px;
+            width: 370px;
+            height: 18px;
+            border-radius: 9px;
+            background: Theme.orange;
+            Text {
+                text: root.now-label;
+                x: 10px;
+                width: parent.width - 16px;
+                height: 100%;
+                vertical-alignment: center;
+                color: Theme.ink;
+                font-size: 11px;
+                font-weight: 700;
+            }
+        }
+
+        VerticalLayout {
+            x: 166px;
+            y: 230px;
+            width: 500px;
+            spacing: 0px;
+            for event[index] in root.events: EventRow {
+                height: root.event-shown(index) ? 58px : 0px;
+                visible: root.event-shown(index);
+                event: event;
+                selected: root.selected-event == index;
+                clicked => {
+                    root.selected-event = index;
+                    root.notice = event.title;
+                    root.pressed("push");
+                }
+            }
+        }
+
+        if root.days.length > 0 && root.days[root.selected-day].count == 0: Text {
+            x: 166px;
+            y: 250px;
+            text: "CLEAR DAY";
+            color: Theme.dim-text;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        Text {
+            x: 684px;
+            y: 176px;
+            text: "TO DO";
+            color: Theme.orange;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        Text {
+            x: 748px;
+            y: 176px;
+            text: "\{root.open-todos()} OPEN · \{root.done-todos()} DONE";
+            color: Theme.cream-text;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        VerticalLayout {
+            x: 684px;
+            y: 206px;
+            width: 328px;
+            TodoRow {
+                title: "BRING IN RECYCLING BIN";
+                detail: "Due today · House";
+                accent: Theme.purple;
+                done: root.done-0;
+                clicked => { root.done-0 = !root.done-0; root.notice = root.done-0 ? "BIN DONE" : "BIN OPEN"; root.pressed(root.done-0 ? "affirmative" : "push-alt"); }
+            }
+            TodoRow {
+                title: "SEND INVOICES";
+                detail: "Due today · Work";
+                accent: Theme.blue;
+                done: root.done-1;
+                clicked => { root.done-1 = !root.done-1; root.notice = root.done-1 ? "INVOICES DONE" : "INVOICES OPEN"; root.pressed(root.done-1 ? "affirmative" : "push-alt"); }
+            }
+            TodoRow {
+                title: "PRINT SETLISTS";
+                detail: "Due Sat · Band";
+                accent: Theme.orange;
+                done: root.done-2;
+                clicked => { root.done-2 = !root.done-2; root.notice = root.done-2 ? "SETLISTS DONE" : "SETLISTS OPEN"; root.pressed(root.done-2 ? "affirmative" : "push-alt"); }
+            }
+            TodoRow {
+                title: "BOOK OIL CHANGE";
+                detail: root.done-3 ? "Done 9:12 am · Personal" : "Due today · Personal";
+                accent: Theme.peach;
+                done: root.done-3;
+                clicked => { root.done-3 = !root.done-3; root.notice = root.done-3 ? "OIL CHANGE DONE" : "OIL CHANGE OPEN"; root.pressed(root.done-3 ? "affirmative" : "push-alt"); }
+            }
+        }
+    }
+
+    if root.section == 1: Rectangle {
+        x: 160px;
+        y: 140px;
+        width: 852px;
+        height: 440px;
+
+        Text { text: "CLIMATE 02"; color: Theme.orange; font-size: 28px; font-weight: 700; }
+        Text { y: 48px; text: "72°"; color: Theme.cream-text; font-size: 72px; font-weight: 700; }
+        Text { x: 150px; y: 88px; text: "DOWNSTAIRS · HEAT SET 70°"; color: Theme.dim-text; font-size: 16px; }
+
+        HorizontalLayout {
+            y: 180px;
+            height: 64px;
+            spacing: 12px;
+            Pressable {
+                width: 160px; radius: 16px; accent: Theme.orange; selected: root.climate-mode == 0;
+                clicked => { root.climate-mode = 0; root.notice = "HEAT"; root.pressed("setting"); }
+                Text { text: "HEAT"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 160px; radius: 16px; accent: Theme.blue; selected: root.climate-mode == 1;
+                clicked => { root.climate-mode = 1; root.notice = "COOL"; root.pressed("setting"); }
+                Text { text: "COOL"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 160px; radius: 16px; accent: Theme.purple; selected: root.climate-mode == 2;
+                clicked => { root.climate-mode = 2; root.notice = "OFF"; root.pressed("setting"); }
+                Text { text: "OFF"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 160px; radius: 16px; accent: Theme.peach; selected: root.climate-mode == 3;
+                clicked => { root.climate-mode = 3; root.notice = "FAN"; root.pressed("setting"); }
+                Text { text: "FAN"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+        }
+    }
+
+    if root.section == 2: Rectangle {
+        x: 160px;
+        y: 140px;
+        width: 852px;
+        height: 440px;
+
+        Text { text: "LIGHTS 03"; color: Theme.orange; font-size: 28px; font-weight: 700; }
+        Text { y: 44px; text: "TAP A ROOM"; color: Theme.dim-text; font-size: 14px; }
+
+        HorizontalLayout {
+            y: 100px;
+            height: 88px;
+            spacing: 12px;
+            Pressable {
+                width: 180px; radius: 18px; accent: Theme.purple; dimmed: !root.light-kitchen;
+                clicked => { root.light-kitchen = !root.light-kitchen; root.notice = root.light-kitchen ? "KITCHEN ON" : "KITCHEN OFF"; root.pressed(root.light-kitchen ? "confirm" : "quick"); }
+                Text { text: "KITCHEN"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 180px; radius: 18px; accent: Theme.blue; dimmed: !root.light-dining;
+                clicked => { root.light-dining = !root.light-dining; root.notice = root.light-dining ? "DINING ON" : "DINING OFF"; root.pressed(root.light-dining ? "confirm" : "quick"); }
+                Text { text: "DINING"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 180px; radius: 18px; accent: Theme.orange; dimmed: !root.light-porch;
+                clicked => { root.light-porch = !root.light-porch; root.notice = root.light-porch ? "PORCH ON" : "PORCH OFF"; root.pressed(root.light-porch ? "confirm" : "quick"); }
+                Text { text: "PORCH"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 180px; radius: 18px; accent: Theme.peach; dimmed: !root.light-hall;
+                clicked => { root.light-hall = !root.light-hall; root.notice = root.light-hall ? "HALL ON" : "HALL OFF"; root.pressed(root.light-hall ? "confirm" : "quick"); }
+                Text { text: "HALL"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+        }
+    }
+
+    if root.section == 3: Rectangle {
+        x: 160px;
+        y: 140px;
+        width: 852px;
+        height: 440px;
+
+        Text { text: "SECURITY 04"; color: Theme.orange; font-size: 28px; font-weight: 700; }
+        Text {
+            y: 48px;
+            text: root.locked ? "FRONT DOOR LOCKED" : "FRONT DOOR OPEN";
+            color: Theme.cream-text;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        HorizontalLayout {
+            y: 140px;
+            height: 88px;
+            spacing: 12px;
+            Pressable {
+                width: 280px; radius: 20px;
+                accent: root.locked ? Theme.purple : Theme.orange;
+                clicked => { root.locked = !root.locked; root.notice = root.locked ? "LOCKED" : "UNLOCKED"; root.pressed(root.locked ? "confirm" : "affirmative"); }
+                Text {
+                    text: root.locked ? "LOCKED" : "UNLOCKED";
+                    width: 100%; height: 100%;
+                    horizontal-alignment: center; vertical-alignment: center;
+                    color: Theme.ink; font-size: 24px; font-weight: 700;
+                }
+            }
+            Pressable {
+                width: 180px; radius: 18px; accent: Theme.blue; selected: !root.away;
+                clicked => { root.away = false; root.notice = "HOME"; root.pressed("setting"); }
+                Text { text: "HOME"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+            Pressable {
+                width: 180px; radius: 18px; accent: Theme.peach; selected: root.away;
+                clicked => { root.away = true; root.notice = "AWAY"; root.pressed("setting"); }
+                Text { text: "AWAY"; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; color: Theme.ink; font-size: 20px; font-weight: 700; }
+            }
+        }
+    }
+
+    if root.show-diagnostics: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000cc;
+
+        Rectangle {
+            width: 420px;
+            height: 280px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: Theme.bg;
+            border-width: 8px;
+            border-color: Theme.blue;
+
+            Text {
+                x: 24px;
+                y: 24px;
+                text: "PANEL";
+                color: Theme.blue;
+                font-size: 28px;
+                font-weight: 700;
+            }
+            Text {
+                x: 24px;
+                y: 80px;
+                text: "1024 × 600  ·  " + root.sync-label;
+                color: Theme.cream-text;
+                font-size: 18px;
+                font-weight: 700;
+            }
+            Text {
+                x: 24px;
+                y: 116px;
+                text: "Same binary on macOS and the Pi 5 panel.";
+                color: Theme.dim-text;
+                font-size: 14px;
+            }
+            Pressable {
+                x: 24px;
+                y: 180px;
+                width: 160px;
+                height: 56px;
+                radius: 16px;
+                accent: Theme.blue;
+                clicked => { root.show-diagnostics = false; root.notice = "PANEL CLOSED"; root.pressed("quick"); }
+                Text {
+                    text: "CLOSE";
+                    width: 100%;
+                    height: 100%;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    color: Theme.ink;
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+            }
+        }
+    }
+}

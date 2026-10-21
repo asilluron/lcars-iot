@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+// Package lcars.v1 defines the messages lcars-api sends and receives over
+// NATS. Every message body on an lcars subject is one of these messages,
+// protobuf-encoded.
+//
+// Compatibility rules: never change or reuse a field number, and never change
+// a field's type. Add new fields with new numbers instead; old clients ignore
+// them.
+package lcars.v1;
+
+option go_package = "github.com/asilluron/lcars-api/gen/go/lcars/v1;lcarsv1";
+
+// GetCalendarRequest asks for the events in a range of days. Send it as a
+// request on the subject "lcars.calendar.get"; the reply is a
+// GetCalendarResponse. An empty message (or an empty body) asks for the 7
+// days starting today.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid request, 503 if the calendar
+// is not configured, 500 otherwise) and "Nats-Service-Error" (a message).
+message GetCalendarRequest {
+  // First day to list, as YYYY-MM-DD in the server's timezone. Empty means
+  // today.
+  string from = 1;
+  // Number of days to list, from 1 to 62. Zero means 7.
+  uint32 days = 2;
+}
+
+// GetCalendarResponse lists every day in the requested range, including days
+// with no events, so a display can render it directly.
+message GetCalendarResponse {
+  // IANA name of the timezone the dates and times are in, such as
+  // "America/New_York".
+  string timezone = 1;
+  // First day listed, as YYYY-MM-DD.
+  string from = 2;
+  // Last day listed (inclusive), as YYYY-MM-DD.
+  string to = 3;
+  // When the .ics files were last read, in seconds since the Unix epoch.
+  int64 updated_at_unix = 4;
+  // One entry per day, in order.
+  repeated CalendarDay days = 5;
+}
+
+// CalendarDay is one day of a GetCalendarResponse.
+message CalendarDay {
+  // The date, as YYYY-MM-DD.
+  string date = 1;
+  // English day name, such as "Monday".
+  string weekday = 2;
+  // Whether this day is today in the server's timezone.
+  bool today = 3;
+  // The events overlapping this day: all-day events first, then timed events
+  // by start time. An event spanning several days appears on each of them.
+  repeated CalendarEvent events = 4;
+}
+
+// CalendarEvent is one occurrence of an event, as shown on one day.
+message CalendarEvent {
+  // Identifies this occurrence: the event's UID and its start time, so each
+  // occurrence of a recurring event has its own ID.
+  string id = 1;
+  string title = 2;
+  // Name of the calendar the event belongs to.
+  string calendar = 3;
+  // Empty if the event has no location.
+  string location = 4;
+  bool all_day = 5;
+  // Start of the whole event (not just this day), in seconds since the Unix
+  // epoch. For all-day events, midnight at the start of the first day.
+  int64 start_unix = 6;
+  // End of the whole event (exclusive), in seconds since the Unix epoch.
+  int64 end_unix = 7;
+  // Start time as "HH:MM" if this timed event starts on this day; unset for
+  // all-day events and on days after the first.
+  optional string start_time = 8;
+  // End time as "HH:MM" if this timed event ends on this day ("24:00" if it
+  // ends at midnight); unset for all-day events and on days before the last.
+  optional string end_time = 9;
+}
+
+// CalendarUpdated is published on the subject "lcars.calendar.updated" when
+// the server re-reads the .ics files and they have changed. Clients showing
+// the calendar should then request it again.
+message CalendarUpdated {
+  // When the .ics files were read, in seconds since the Unix epoch.
+  int64 updated_at_unix = 1;
+}

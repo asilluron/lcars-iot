@@ -1,0 +1,41 @@
+import { Theme } from "theme.slint";
+
+export component SegmentSlider inherits Rectangle {
+    in-out property <int> value: 0;
+    in property <bool> enabled: true;
+    callback dragged(int);
+    callback released(int);
+
+    height: Theme.touch-min;
+    opacity: root.enabled ? 1 : 0.25;
+
+    HorizontalLayout {
+        spacing: 4px;
+        padding-left: Theme.grid;
+        padding-right: Theme.grid;
+        for segment in 20: Rectangle {
+            horizontal-stretch: 1;
+            height: Theme.grid * 3;
+            y: (parent.height - self.height) / 2;
+            background: (segment * 5) < root.value ? Theme.accent-3 : #222222;
+        }
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        enabled: root.enabled;
+
+        pointer-event(event) => {
+            if (!root.enabled || root.width <= 0px) {
+                return;
+            }
+            root.value = max(0, min(100, (self.mouse-x / self.width) * 100));
+            if (event.kind == PointerEventKind.up) {
+                root.released(root.value);
+            } else {
+                root.dragged(root.value);
+            }
+        }
+    }
+}

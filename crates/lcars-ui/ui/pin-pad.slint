@@ -1,0 +1,69 @@
+import { Theme } from "theme.slint";
+import { Pill } from "pill.slint";
+
+export component PinPad inherits Rectangle {
+    callback submitted(string);
+    callback cancelled();
+    property <string> entry: "";
+
+    background: Theme.bg;
+    border-width: Theme.grid;
+    border-color: Theme.accent-2;
+
+    VerticalLayout {
+        padding: Theme.grid * 3;
+        spacing: Theme.grid;
+        alignment: center;
+
+        Text {
+            text: root.entry == "" ? "PIN" : "••••";
+            color: Theme.accent-4;
+            font-size: 28px;
+            horizontal-alignment: center;
+        }
+
+        HorizontalLayout {
+            spacing: Theme.grid;
+            alignment: center;
+            Pill { label: "1"; clicked => { root.entry += "1"; } }
+            Pill { label: "2"; clicked => { root.entry += "2"; } }
+            Pill { label: "3"; clicked => { root.entry += "3"; } }
+        }
+        HorizontalLayout {
+            spacing: Theme.grid;
+            alignment: center;
+            Pill { label: "4"; clicked => { root.entry += "4"; } }
+            Pill { label: "5"; clicked => { root.entry += "5"; } }
+            Pill { label: "6"; clicked => { root.entry += "6"; } }
+        }
+        HorizontalLayout {
+            spacing: Theme.grid;
+            alignment: center;
+            Pill { label: "7"; clicked => { root.entry += "7"; } }
+            Pill { label: "8"; clicked => { root.entry += "8"; } }
+            Pill { label: "9"; clicked => { root.entry += "9"; } }
+        }
+        HorizontalLayout {
+            spacing: Theme.grid;
+            alignment: center;
+            Pill { label: "CLR"; accent: Theme.accent-4; clicked => { root.entry = ""; } }
+            Pill { label: "0"; clicked => { root.entry += "0"; } }
+            Pill {
+                label: "ENTER";
+                accent: Theme.accent-1;
+                clicked => {
+                    root.submitted(root.entry);
+                    root.entry = "";
+                }
+            }
+        }
+        Pill {
+            label: "CANCEL";
+            accent: Theme.alert;
+            clicked => {
+                root.entry = "";
+                root.cancelled();
+            }
+        }
+    }
+}

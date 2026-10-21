@@ -1,0 +1,72 @@
+import { Theme } from "theme.slint";
+import { Elbow } from "elbow.slint";
+import { Pill } from "pill.slint";
+import { BarSegment } from "bar-segment.slint";
+import { StatusStrip } from "status-strip.slint";
+
+export struct PanelItem {
+    id: string,
+    title: string,
+    accent: color,
+}
+
+export component Frame inherits Rectangle {
+    in property <string> status;
+    in property <string> clock-text;
+    in property <string> error-text;
+    in property <[PanelItem]> panels;
+    in property <int> active-panel: 0;
+    in property <bool> controls-enabled: false;
+    in property <bool> blink-on: true;
+    callback panel-selected(int);
+    callback elbow-pressed(bool);
+
+    background: Theme.bg;
+
+    VerticalLayout {
+        padding: Theme.grid;
+        spacing: Theme.grid;
+
+        HorizontalLayout {
+            height: Theme.header-height;
+            spacing: Theme.grid;
+            Elbow {
+                width: Theme.header-height;
+                height: Theme.header-height;
+                pressed-changed(down) => { root.elbow-pressed(down); }
+            }
+            StatusStrip {
+                horizontal-stretch: 1;
+                status: root.status;
+                clock-text: root.clock-text;
+                error-text: root.error-text;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: Theme.grid;
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                width: Theme.sidebar-width;
+                spacing: Theme.grid;
+                for panel[index] in root.panels: Pill {
+                    label: panel.title;
+                    accent: index == root.active-panel ? panel.accent : Theme.accent-2;
+                    clicked => { root.panel-selected(index); }
+                }
+                BarSegment {
+                    vertical-stretch: 1;
+                    accent: Theme.accent-2;
+                }
+            }
+
+            content := Rectangle {
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
+                background: Theme.bg;
+                @children
+            }
+        }
+    }
+}

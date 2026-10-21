@@ -1,0 +1,52 @@
+import { Theme } from "theme.slint";
+import { BarSegment } from "bar-segment.slint";
+
+export component StatusStrip inherits HorizontalLayout {
+    in property <string> status;
+    in property <string> clock-text;
+    in property <string> error-text;
+    spacing: Theme.grid;
+    alignment: center;
+
+    BarSegment {
+        accent: Theme.accent-1;
+        horizontal-stretch: 1;
+        Text {
+            text: root.status;
+            color: Theme.text-on-accent;
+            font-weight: 700;
+            horizontal-alignment: left;
+            vertical-alignment: center;
+            x: Theme.grid * 2;
+            height: 100%;
+        }
+    }
+
+    BarSegment {
+        accent: root.error-text == "" ? Theme.accent-4 : Theme.alert;
+        min-width: 180px;
+        Text {
+            text: root.error-text;
+            color: Theme.text-on-accent;
+            font-weight: 700;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+            width: parent.width - Theme.grid * 2;
+            height: 100%;
+        }
+    }
+
+    BarSegment {
+        accent: Theme.accent-4;
+        min-width: 96px;
+        Text {
+            text: root.clock-text;
+            color: Theme.text-on-accent;
+            font-weight: 700;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+            width: parent.width - Theme.grid * 2;
+            height: 100%;
+        }
+    }
+}

@@ -1,0 +1,49 @@
+import { Theme } from "theme.slint";
+
+export component Pill inherits Rectangle {
+    in property <string> label;
+    in property <color> accent: Theme.accent-1;
+    in property <bool> available: true;
+    in property <bool> enabled: true;
+    in property <bool> pending: false;
+    in property <bool> blink-on: true;
+    in property <bool> error: false;
+    callback clicked();
+
+    height: Theme.touch-min;
+    min-width: 128px;
+    border-radius: self.height / 2;
+    background: root.error ? Theme.alert : root.accent;
+    opacity: !root.enabled ? 0.25 : !root.available ? 0.4 : root.pending && !root.blink-on ? 0.35 : 1;
+
+    animate background { duration: 200ms; }
+    animate opacity { duration: 150ms; }
+
+    states [
+        down when touch.pressed && root.enabled: {
+            background: root.accent.brighter(0.25);
+        }
+    ]
+
+    Text {
+        text: root.label;
+        color: Theme.text-on-accent;
+        font-weight: 700;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+        width: parent.width - Theme.grid * 2;
+        x: 0px;
+        height: 100%;
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        enabled: root.enabled;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}

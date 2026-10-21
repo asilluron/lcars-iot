@@ -1,0 +1,25 @@
+import { Theme } from "theme.slint";
+
+export component Readout inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value;
+    spacing: Theme.grid;
+    alignment: center;
+
+    Text {
+        text: root.label;
+        color: Theme.accent-4;
+        vertical-alignment: center;
+        font-size: 16px;
+    }
+
+    Text {
+        text: root.value;
+        color: Theme.accent-3;
+        font-weight: 700;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+        font-size: 22px;
+    }
+}

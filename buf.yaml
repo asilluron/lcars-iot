@@ -1,0 +1,12 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # home.v1 keeps the spec's enum identifiers. Wire values are the field numbers.
+    - ENUM_VALUE_PREFIX
+breaking:
+  use:
+    - FILE

@@ -1,0 +1,182 @@
+import { Theme } from "theme.slint";
+import { PanelItem } from "frame.slint";
+import { HomeScreen, DayItem, EventItem } from "home.slint";
+import { AlertOverlay } from "alert-overlay.slint";
+import { PinPad } from "pin-pad.slint";
+import { DiagnosticsOverlay } from "diagnostics-overlay.slint";
+
+import "../../../assets/fonts/Antonio-Variable.ttf";
+
+export struct Tile {
+    entity-id: string,
+    name: string,
+    value: string,
+    kind: string,
+    level: int,
+    on: bool,
+    available: bool,
+    in-flight: bool,
+    pending-visible: bool,
+}
+
+export { Theme, PanelItem }
+
+export component AppWindow inherits Window {
+    title: "Home";
+    preferred-width: 1024px * Theme.scale;
+    preferred-height: 600px * Theme.scale;
+    min-width: 1024px;
+    min-height: 600px;
+    background: Theme.bg;
+    default-font-family: "Antonio";
+    default-font-size: 18px * Theme.scale;
+
+    // Sync bridge fields. The calendar paints without them until NATS is wired.
+    in-out property <string> status: "LOCAL";
+    in-out property <string> clock-text: "--:--";
+    in-out property <string> error-text: "";
+    in-out property <bool> controls-enabled: true;
+    in-out property <bool> values-dimmed: false;
+    in-out property <bool> blink-on: true;
+    in-out property <bool> alert-visible: false;
+    in-out property <string> alert-title: "";
+    in-out property <string> alert-body: "";
+    in-out property <bool> alert-bright: true;
+    in-out property <bool> pin-visible: false;
+    in-out property <bool> diagnostics-visible: false;
+    in-out property <bool> screen-off: false;
+    in-out property <string> panel-title: "CALENDAR";
+    in-out property <string> version-text: "";
+    in-out property <string> diag-fps: "—";
+    in-out property <string> diag-frame: "—";
+    in-out property <string> diag-rtt: "—";
+    in-out property <string> diag-revision: "—";
+    in-out property <[PanelItem]> panels;
+    in-out property <[Tile]> tiles;
+    in-out property <int> active-panel: 0;
+
+    in-out property <string> clock-hm: "10:42";
+    in-out property <string> clock-suffix: "AM";
+    in-out property <string> weekday-name: "WEDNESDAY";
+    in-out property <string> date-line: "21 OCTOBER 2026";
+    in-out property <string> now-label: "NOW 10:42 AM";
+    in-out property <string> week-label: "WEEK 43";
+    in-out property <[DayItem]> days: [
+        { num: "21", name: "WED", dots: 5, count: 5, accent: Theme.cream },
+        { num: "22", name: "THU", dots: 3, count: 3, accent: Theme.blue },
+        { num: "23", name: "FRI", dots: 2, count: 2, accent: Theme.blue },
+        { num: "24", name: "SAT", dots: 4, count: 4, accent: Theme.purple },
+        { num: "25", name: "SUN", dots: 1, count: 1, accent: Theme.purple },
+        { num: "26", name: "MON", dots: 3, count: 3, accent: Theme.blue },
+        { num: "27", name: "TUE", dots: 2, count: 2, accent: Theme.blue },
+    ];
+    in-out property <[string]> day-heads: [
+        "WED 21 OCT",
+        "THU 22 OCT",
+        "FRI 23 OCT",
+        "SAT 24 OCT",
+        "SUN 25 OCT",
+        "MON 26 OCT",
+        "TUE 27 OCT",
+    ];
+    in-out property <[string]> all-day-labels: [
+        "Recycling pickup",
+        "No all-day items",
+        "No all-day items",
+        "Setlist drop",
+        "Family dinner",
+        "Invoice block",
+        "Bin night",
+    ];
+    in-out property <[EventItem]> events: [
+        { day: 0, time: "11:00", suffix: "AM", title: "DESIGN REVIEW", detail: "11:00 am to 12:00 pm · Vid...", badge: "IN 18 MIN", tag: "WORK", lane: "work", accent: Theme.blue },
+        { day: 0, time: "12:30", suffix: "PM", title: "LUNCH", detail: "12:30 to 1:30 pm", badge: "", tag: "PERSONAL", lane: "personal", accent: Theme.peach },
+        { day: 0, time: "4:00", suffix: "PM", title: "FURNACE SERVICE", detail: "Arrival window 4:00 to 6:00 pm", badge: "", tag: "HOUSE", lane: "house", accent: Theme.purple },
+        { day: 0, time: "7:30", suffix: "PM", title: "BAND REHEARSAL", detail: "7:30 to 10:00 pm", badge: "", tag: "BAND", lane: "band", accent: Theme.orange },
+        { day: 1, time: "9:00", suffix: "AM", title: "STANDUP", detail: "9:00 to 9:15 am", badge: "", tag: "WORK", lane: "work", accent: Theme.blue },
+        { day: 1, time: "6:00", suffix: "PM", title: "SECTIONAL", detail: "6:00 to 8:00 pm", badge: "", tag: "BAND", lane: "band", accent: Theme.orange },
+        { day: 3, time: "2:00", suffix: "PM", title: "LOAD IN", detail: "Venue doors at 1:30 pm", badge: "", tag: "BAND", lane: "band", accent: Theme.orange },
+        { day: 5, time: "8:30", suffix: "AM", title: "SEND INVOICES", detail: "Office block", badge: "", tag: "WORK", lane: "work", accent: Theme.blue },
+    ];
+
+    callback tile-toggled(string, bool);
+    callback slider-dragged(string, int);
+    callback slider-released(string, int);
+    callback scene-activated(string);
+    callback panel-selected(int);
+    callback elbow-pressed(bool);
+    callback alert-pressed(bool);
+    callback pin-submitted(string);
+    callback pin-cancelled();
+    callback woke();
+    callback pressed(string);
+
+    HomeScreen {
+        width: 100%;
+        height: 100%;
+        clock-hm: root.clock-hm;
+        clock-suffix: root.clock-suffix;
+        weekday-name: root.weekday-name;
+        date-line: root.date-line;
+        now-label: root.now-label;
+        days: root.days;
+        day-heads: root.day-heads;
+        all-day-labels: root.all-day-labels;
+        events: root.events;
+        sync-label: root.status;
+        week-label: root.week-label;
+        pressed(kind) => { root.pressed(kind); }
+    }
+
+    if root.screen-off && !root.alert-visible: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: black;
+        TouchArea {
+            width: 100%;
+            height: 100%;
+            clicked => { root.woke(); }
+        }
+    }
+
+    if root.alert-visible: AlertOverlay {
+        width: 100%;
+        height: 100%;
+        title: root.alert-title;
+        body: root.alert-body;
+        bright: root.alert-bright;
+        dismiss-press(down) => { root.alert-pressed(down); }
+    }
+
+    if root.pin-visible: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000aa;
+        PinPad {
+            width: 420px;
+            height: 460px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            submitted(pin) => { root.pin-submitted(pin); }
+            cancelled => { root.pin-cancelled(); }
+        }
+    }
+
+    if root.diagnostics-visible: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000cc;
+        DiagnosticsOverlay {
+            width: 480px;
+            height: 420px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            version: root.version-text;
+            fps: root.diag-fps;
+            frame: root.diag-frame;
+            rtt: root.diag-rtt;
+            revision: root.diag-revision;
+            close => { root.diagnostics-visible = false; }
+        }
+    }
+}

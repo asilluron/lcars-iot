@@ -1,0 +1,57 @@
+import { Theme } from "theme.slint";
+
+export component Elbow inherits Rectangle {
+    in property <color> accent: Theme.accent-1;
+    callback pressed-changed(bool);
+
+    background: transparent;
+
+    Path {
+        width: 100%;
+        height: 100%;
+        fill: root.accent;
+
+        MoveTo {
+            x: 0;
+            y: 0;
+        }
+        LineTo {
+            x: 100;
+            y: 0;
+        }
+        LineTo {
+            x: 100;
+            y: 45;
+        }
+        ArcTo {
+            radius-x: 55;
+            radius-y: 55;
+            x: 45;
+            y: 100;
+            sweep: true;
+            large-arc: false;
+        }
+        LineTo {
+            x: 0;
+            y: 100;
+        }
+        Close {}
+    }
+
+    Rectangle {
+        x: parent.width * 0.42;
+        y: parent.height * 0.42;
+        width: parent.width * 0.72;
+        height: parent.height * 0.72;
+        border-radius: parent.width;
+        background: Theme.bg;
+    }
+
+    TouchArea {
+        width: 100%;
+        height: 100%;
+        changed pressed => {
+            root.pressed-changed(self.pressed);
+        }
+    }
+}

@@ -1,0 +1,37 @@
+import { Theme } from "theme.slint";
+import { Pill } from "pill.slint";
+import { Readout } from "readout.slint";
+
+export component DiagnosticsOverlay inherits Rectangle {
+    in property <string> version;
+    in property <string> fps;
+    in property <string> frame;
+    in property <string> rtt;
+    in property <string> revision;
+    callback close();
+
+    background: Theme.bg;
+    border-width: Theme.grid;
+    border-color: Theme.accent-3;
+
+    VerticalLayout {
+        padding: Theme.grid * 3;
+        spacing: Theme.grid;
+        Text {
+            text: "DIAGNOSTICS";
+            color: Theme.accent-3;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        Readout { label: "VERSION"; value: root.version; }
+        Readout { label: "FPS"; value: root.fps; }
+        Readout { label: "FRAME"; value: root.frame; }
+        Readout { label: "NATS RTT"; value: root.rtt; }
+        Readout { label: "KV REV"; value: root.revision; }
+        Pill {
+            label: "CLOSE";
+            accent: Theme.accent-3;
+            clicked => { root.close(); }
+        }
+    }
+}
