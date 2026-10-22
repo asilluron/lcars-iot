@@ -67,6 +67,8 @@ fn main() {
                 .map(std::path::PathBuf::from)
                 .or_else(|| files.ca_path.clone()),
             creds_path: files.creds_path.clone(),
+            user: config.device_user.clone(),
+            password: config.device_secret.clone(),
             require_tls: config.nats_urls.iter().any(|url| url.starts_with("tls://")),
             screen_id: config.screen_id.clone(),
         };

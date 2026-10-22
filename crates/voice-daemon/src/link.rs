@@ -8,11 +8,15 @@ use std::time::Duration;
 
 use base64::Engine;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Hub {
     pub urls: Vec<String>,
     pub ca_path: Option<PathBuf>,
     pub creds_path: Option<PathBuf>,
+    /// Device token id. With `password`, this is the NATS username.
+    pub user: Option<String>,
+    /// Device token secret. Never logged.
+    pub password: Option<String>,
     pub require_tls: bool,
     pub screen_id: String,
 }
@@ -33,6 +37,11 @@ impl Hub {
         if require_tls && ca_path.is_none() {
             return Err("NATS_URL uses tls but NATS_CA_B64 or NATS_CA_FILE is missing".into());
         }
+        let user = nonempty("LCARS_DEVICE_USER");
+        let password = nonempty("LCARS_DEVICE_SECRET");
+        if user.is_some() != password.is_some() {
+            return Err("LCARS_DEVICE_USER and LCARS_DEVICE_SECRET must both be set".into());
+        }
         let screen_id = std::env::var("SCREEN_ID")
             .ok()
             .filter(|id| !id.is_empty())
@@ -41,6 +50,8 @@ impl Hub {
             urls,
             ca_path,
             creds_path,
+            user,
+            password,
             require_tls,
             screen_id,
         })
@@ -60,11 +71,16 @@ impl Hub {
         if let Some(path) = &self.ca_path {
             options = options.add_root_certificates(path.clone());
         }
-        if let Some(path) = &self.creds_path {
+        if let Some(path) = &self.creds_path
+            && self.user.is_none()
+        {
             options = options
                 .credentials_file(path)
                 .await
                 .map_err(|error| error.to_string())?;
+        }
+        if let (Some(user), Some(password)) = (&self.user, &self.password) {
+            options = options.user_and_password(user.clone(), password.clone());
         }
         let addrs = self
             .urls
@@ -77,6 +93,10 @@ impl Hub {
             .await
             .map_err(|error| error.to_string())
     }
+}
+
+fn nonempty(name: &str) -> Option<String> {
+    std::env::var(name).ok().filter(|value| !value.is_empty())
 }
 
 fn materialize(

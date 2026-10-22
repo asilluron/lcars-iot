@@ -21,6 +21,10 @@ pub struct AgendaLink {
     pub urls: Vec<String>,
     pub ca_path: Option<PathBuf>,
     pub creds_path: Option<PathBuf>,
+    /// Device token id. With `password`, this is the NATS username.
+    pub user: Option<String>,
+    /// Device token secret. Never logged.
+    pub password: Option<String>,
     pub require_tls: bool,
     pub screen_id: String,
 }
@@ -218,11 +222,16 @@ async fn connect(link: &AgendaLink) -> Result<async_nats::Client, String> {
     if let Some(path) = &link.ca_path {
         options = options.add_root_certificates(path.clone());
     }
-    if let Some(path) = &link.creds_path {
+    if let Some(path) = &link.creds_path
+        && link.user.is_none()
+    {
         options = options
             .credentials_file(path)
             .await
             .map_err(|err: std::io::Error| err.to_string())?;
+    }
+    if let (Some(user), Some(password)) = (&link.user, &link.password) {
+        options = options.user_and_password(user.clone(), password.clone());
     }
     let addrs = link
         .urls
