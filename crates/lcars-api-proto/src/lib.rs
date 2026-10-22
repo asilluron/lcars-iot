@@ -1,9 +1,11 @@
-//! `lcars.v1` messages for the lcars-api NATS calendar and camera catalog.
+//! `lcars.v1` messages for the lcars-api NATS calendar, camera catalog, and
+//! training audio upload.
 //!
-//! The schemas are `proto/lcars/v1/calendar.proto` and
-//! `proto/lcars/v1/cameras.proto`, copied from lcars-api. Subjects and error
-//! headers match that server. Video is not a NATS body: `stream_path` and
-//! `snapshot_path` are HTTP paths on the same server.
+//! The schemas are `proto/lcars/v1/calendar.proto`,
+//! `proto/lcars/v1/cameras.proto`, and `proto/lcars/v1/training.proto`, copied
+//! from lcars-api. Subjects and error headers match that server. Video is not
+//! a NATS body: `stream_path` and `snapshot_path` are HTTP paths on the same
+//! server.
 
 use prost::Message;
 
@@ -19,6 +21,10 @@ pub const CALENDAR_UPDATED: &str = "lcars.calendar.updated";
 
 /// Request a [`v1::ListCamerasRequest`]; the reply is a [`v1::ListCamerasResponse`].
 pub const CAMERAS_LIST: &str = "lcars.cameras.list";
+
+/// Send a [`v1::PutTrainingAudioRequest`]; the reply is a
+/// [`v1::PutTrainingAudioResponse`].
+pub const TRAINING_PUT: &str = "lcars.training.put";
 
 /// HTTP-style status on an error reply, such as `"503"`.
 pub const ERROR_CODE: &str = "Nats-Service-Error-Code";
@@ -41,8 +47,9 @@ pub fn decode<T: Message + Default>(bytes: &[u8]) -> Result<T, prost::DecodeErro
 mod tests {
     use super::v1::{
         Camera, GetCalendarRequest, GetCalendarResponse, ListCamerasRequest, ListCamerasResponse,
+        PutTrainingAudioRequest,
     };
-    use super::{CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, decode, encode};
+    use super::{CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, TRAINING_PUT, decode, encode};
 
     #[test]
     fn calendar_request_round_trips() {
@@ -55,6 +62,17 @@ mod tests {
         let _ = GetCalendarResponse::default();
         assert_eq!(CALENDAR_GET, "lcars.calendar.get");
         assert_eq!(CALENDAR_UPDATED, "lcars.calendar.updated");
+    }
+
+    #[test]
+    fn training_audio_round_trips() {
+        let training = PutTrainingAudioRequest {
+            screen_id: "kitchen".into(),
+            pcm: vec![0, 0, 1, 0],
+        };
+        let decoded: PutTrainingAudioRequest = decode(&encode(&training)).unwrap();
+        assert_eq!(decoded, training);
+        assert_eq!(TRAINING_PUT, "lcars.training.put");
     }
 
     #[test]

@@ -14,6 +14,7 @@ mod modes;
 mod net;
 mod outbound;
 mod session;
+mod training;
 mod trigger;
 mod vad;
 mod verifier;

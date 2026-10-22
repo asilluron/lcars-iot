@@ -35,10 +35,15 @@ struct OpenSession {
 }
 
 pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(), String> {
-    apply_env(&mut config);
+    apply_env(&mut config)?;
     let trigger_hash = file_hash(&config.trigger.model);
     let verifier_hash = file_hash(&config.verifier.classifier);
-    tracing::info!(trigger = %trigger_hash, verifier = %verifier_hash, "models");
+    tracing::info!(
+        trigger = %trigger_hash,
+        verifier = %verifier_hash,
+        stream_all = config.training.stream_all,
+        "models"
+    );
 
     let trigger = Trigger::open(
         &config.trigger.model,
@@ -58,6 +63,7 @@ pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(
     let (producer, consumer) = rtrb::RingBuffer::<i16>::new(HISTORY);
     let (cmd_tx, cmd_rx) = std::sync::mpsc::channel();
     let (out_tx, out_rx) = tokio::sync::mpsc::channel(QUEUE_DEPTH);
+    let (train_tx, train_rx) = tokio::sync::mpsc::channel(crate::training::QUEUE_DEPTH);
 
     let capture_cmd = cmd_tx.clone();
     let device = config.capture.device.clone();
@@ -73,7 +79,7 @@ pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(
             .enable_all()
             .build()
             .expect("nats runtime");
-        runtime.block_on(crate::net::run(hub, screen_id, out_rx, net_cmd));
+        runtime.block_on(crate::net::run(hub, screen_id, out_rx, train_rx, net_cmd));
     });
 
     detect(
@@ -82,6 +88,7 @@ pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(
         consumer,
         cmd_rx,
         out_tx,
+        train_tx,
         trigger,
         vad,
         verifier,
@@ -97,6 +104,7 @@ fn detect(
     mut consumer: Consumer<i16>,
     cmd_rx: Receiver<Cmd>,
     out_tx: Sender<Outbound>,
+    train_tx: Sender<Vec<u8>>,
     mut trigger: Trigger,
     mut vad: Vad,
     verifier: Verifier,
@@ -117,6 +125,8 @@ fn detect(
     let mut endpoint = false;
     let mut cancel = false;
     let mut dropped = 0_u64;
+    let mut training_dropped = 0_u64;
+    let mut training = crate::training::Batch::default();
 
     loop {
         while let Ok(cmd) = cmd_rx.try_recv() {
@@ -145,6 +155,7 @@ fn detect(
                     session = None;
                     idle_pending = false;
                     live_pending.clear();
+                    training.clear();
                     publish_state(&out_tx, &screen, Phase::MicOffline, "");
                 }
             }
@@ -164,6 +175,17 @@ fn detect(
 
         for sample in chunk {
             samples_seen += 1;
+            if let Some(pcm) = training.push(sample, config.training.stream_all)
+                && train_tx.try_send(pcm).is_err()
+            {
+                training_dropped += 1;
+                if training_dropped == 1 || training_dropped.is_multiple_of(60) {
+                    tracing::warn!(
+                        training_dropped,
+                        "dropped training audio; the hub is behind"
+                    );
+                }
+            }
             let now_ms = samples_seen * 1000 / u64::from(voice_proto::SAMPLE_RATE);
             push_history(&mut history, sample);
             vad_pending.push(sample);
@@ -367,6 +389,7 @@ fn reload(
 ) -> Result<(), String> {
     let fresh = crate::config::load(path).map_err(|error| error.to_string())?;
     config.apply_live(&fresh);
+    apply_env(config)?;
     trigger.set_threshold(config.trigger.threshold)?;
     vad.set_threshold(config.vad.threshold)?;
     tracing::info!(
@@ -375,6 +398,7 @@ fn reload(
         onset_ms = config.gate.onset_ms,
         silence_ms = config.gate.silence_ms,
         vad = config.vad.threshold,
+        stream_all = config.training.stream_all,
         "config reloaded"
     );
     Ok(())
@@ -418,7 +442,7 @@ fn unix_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn apply_env(config: &mut VoiceConfig) {
+fn apply_env(config: &mut VoiceConfig) -> Result<(), String> {
     if let Some(dir) = std::env::var_os("VOICE_LOG_DIR") {
         config.log.dir = std::path::PathBuf::from(dir);
     }
@@ -428,6 +452,7 @@ fn apply_env(config: &mut VoiceConfig) {
             config.capture.device = device.into_owned();
         }
     }
+    crate::config::apply_stream_all_env(config)
 }
 
 fn watch_signals(cmd: std::sync::mpsc::Sender<Cmd>) {

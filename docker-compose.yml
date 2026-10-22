@@ -49,6 +49,9 @@ services:
       VOICE_CONFIG: /opt/voice/voice.toml
       VOICE_LOG_DIR: /data/wake-log
       VOICE_ALSA_DEVICE: auto
+      # Off for the fleet. Set VOICE_STREAM_ALL=true on one device in
+      # balenaCloud to upload that screen's audio for wake-word training.
+      VOICE_STREAM_ALL: "false"
     volumes:
       - voice-data:/data
 volumes:
