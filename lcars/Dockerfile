@@ -3,6 +3,7 @@ FROM rust:1-trixie AS build
 RUN apt-get update && apt-get install -y --no-install-recommends \
       pkg-config protobuf-compiler libinput-dev libudev-dev libgbm-dev \
       libdrm-dev libxkbcommon-dev libfontconfig-dev libasound2-dev \
+      libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
@@ -15,7 +16,7 @@ FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libinput10 libudev1 libgbm1 libdrm2 libegl1 libgles2 libegl-mesa0 \
       libgl1-mesa-dri libxkbcommon0 libfontconfig1 libasound2t64 alsa-utils \
-      ca-certificates \
+      libavcodec61 libavformat61 libavutil59 libswscale8 ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/target/release/lcars-app /usr/local/bin/lcars-app
 COPY --from=build /tmp/bind-udev /usr/local/bin/bind-udev

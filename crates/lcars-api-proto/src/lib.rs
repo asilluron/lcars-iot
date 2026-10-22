@@ -1,7 +1,9 @@
-//! `lcars.v1` messages for the lcars-api NATS calendar.
+//! `lcars.v1` messages for the lcars-api NATS calendar and camera catalog.
 //!
-//! The schema is `proto/lcars/v1/calendar.proto`, copied from lcars-api.
-//! Subjects and error headers match that server.
+//! The schemas are `proto/lcars/v1/calendar.proto` and
+//! `proto/lcars/v1/cameras.proto`, copied from lcars-api. Subjects and error
+//! headers match that server. Video is not a NATS body: `stream_path` and
+//! `snapshot_path` are HTTP paths on the same server.
 
 use prost::Message;
 
@@ -14,6 +16,9 @@ pub const CALENDAR_GET: &str = "lcars.calendar.get";
 
 /// A [`v1::CalendarUpdated`] is published here when the calendar changes.
 pub const CALENDAR_UPDATED: &str = "lcars.calendar.updated";
+
+/// Request a [`v1::ListCamerasRequest`]; the reply is a [`v1::ListCamerasResponse`].
+pub const CAMERAS_LIST: &str = "lcars.cameras.list";
 
 /// HTTP-style status on an error reply, such as `"503"`.
 pub const ERROR_CODE: &str = "Nats-Service-Error-Code";
@@ -34,8 +39,10 @@ pub fn decode<T: Message + Default>(bytes: &[u8]) -> Result<T, prost::DecodeErro
 
 #[cfg(test)]
 mod tests {
-    use super::v1::{GetCalendarRequest, GetCalendarResponse};
-    use super::{CALENDAR_GET, CALENDAR_UPDATED, decode, encode};
+    use super::v1::{
+        Camera, GetCalendarRequest, GetCalendarResponse, ListCamerasRequest, ListCamerasResponse,
+    };
+    use super::{CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, decode, encode};
 
     #[test]
     fn calendar_request_round_trips() {
@@ -48,5 +55,24 @@ mod tests {
         let _ = GetCalendarResponse::default();
         assert_eq!(CALENDAR_GET, "lcars.calendar.get");
         assert_eq!(CALENDAR_UPDATED, "lcars.calendar.updated");
+    }
+
+    #[test]
+    fn camera_list_round_trips() {
+        let request = ListCamerasRequest {};
+        let decoded: ListCamerasRequest = decode(&encode(&request)).unwrap();
+        assert_eq!(decoded, request);
+        let response = ListCamerasResponse {
+            cameras: vec![Camera {
+                sn: "CAM1".into(),
+                name: "Front door".into(),
+                has_camera: true,
+                stream_path: "/cameras/CAM1/stream".into(),
+                snapshot_path: "/cameras/CAM1/snapshot".into(),
+            }],
+        };
+        let decoded: ListCamerasResponse = decode(&encode(&response)).unwrap();
+        assert_eq!(decoded, response);
+        assert_eq!(CAMERAS_LIST, "lcars.cameras.list");
     }
 }

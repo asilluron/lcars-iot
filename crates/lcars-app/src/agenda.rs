@@ -74,11 +74,17 @@ pub fn paint(app: &AppWindow, status: &str, model: Option<AgendaModel>) {
 
 pub async fn run(
     link: AgendaLink,
+    http: Option<crate::cameras::HttpConfig>,
+    commands: tokio::sync::mpsc::UnboundedReceiver<crate::cameras::Command>,
     weak: Weak<AppWindow>,
     voice_cancel: tokio::sync::broadcast::Sender<()>,
 ) {
+    let (client_tx, client_rx) = tokio::sync::watch::channel(None);
+    let _cameras = tokio::spawn(crate::cameras::run(client_rx, http, commands, weak.clone()));
+    crate::cameras::post_status(&weak, "LINKING").await;
     let mut attempt = 0_u32;
     let mut had_calendar = false;
+    let mut had_client = false;
     loop {
         if !had_calendar {
             post(&weak, "LINKING", None).await;
@@ -86,7 +92,9 @@ pub async fn run(
         match connect(&link).await {
             Ok(client) => {
                 attempt = 0;
+                had_client = true;
                 tracing::info!("nats connected");
+                let _ = client_tx.send(Some(client.clone()));
                 let voice = tokio::spawn(crate::voice::watch(
                     client.clone(),
                     link.screen_id.clone(),
@@ -103,12 +111,15 @@ pub async fn run(
                             tracing::warn!(error = %error, "calendar session ended");
                             let status = status_for(&error);
                             post(&weak, &status, None).await;
-                            if client.connection_state()
-                                == async_nats::connection::State::Disconnected
+                            // A calendar timeout leaves the NATS client in place so
+                            // the camera catalog can keep refreshing.
+                            if client.connection_state() == async_nats::connection::State::Connected
                             {
-                                break;
+                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                continue;
                             }
-                            tokio::time::sleep(Duration::from_secs(5)).await;
+                            let _ = client_tx.send(None);
+                            break;
                         }
                     }
                 }
@@ -116,6 +127,9 @@ pub async fn run(
             }
             Err(error) => {
                 tracing::warn!(error = %error, "nats connect failed");
+                if !had_client {
+                    crate::cameras::post_status(&weak, "NO LINK").await;
+                }
                 let model = if had_calendar {
                     None
                 } else {
