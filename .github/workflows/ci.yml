@@ -13,8 +13,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            ca-certificates curl build-essential pkg-config git \
-            libasound2-dev libfontconfig-dev \
+            ca-certificates curl build-essential pkg-config git clang libclang-dev \
+            libasound2-dev libfontconfig-dev libudev-dev libinput-dev \
+            libgbm-dev libdrm-dev libxkbcommon-dev \
             libavcodec-dev libavutil-dev libswscale-dev
           curl -fsSL -o /tmp/nats.tar.gz \
             https://github.com/nats-io/nats-server/releases/download/v2.11.4/nats-server-v2.11.4-linux-amd64.tar.gz
