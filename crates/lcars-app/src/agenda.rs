@@ -80,11 +80,18 @@ pub async fn run(
     link: AgendaLink,
     http: Option<crate::cameras::HttpConfig>,
     commands: tokio::sync::mpsc::UnboundedReceiver<crate::cameras::Command>,
+    reminders: tokio::sync::mpsc::UnboundedReceiver<String>,
     weak: Weak<AppWindow>,
     voice_cancel: tokio::sync::broadcast::Sender<()>,
 ) {
     let (client_tx, client_rx) = tokio::sync::watch::channel(None);
-    let _cameras = tokio::spawn(crate::cameras::run(client_rx, http, commands, weak.clone()));
+    let _cameras = tokio::spawn(crate::cameras::run(
+        client_rx.clone(),
+        http,
+        commands,
+        weak.clone(),
+    ));
+    let _reminders = tokio::spawn(crate::reminders::run(client_rx, reminders, weak.clone()));
     crate::cameras::post_status(&weak, "LINKING").await;
     let mut attempt = 0_u32;
     let mut had_calendar = false;
