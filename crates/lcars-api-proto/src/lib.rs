@@ -62,6 +62,10 @@ mod tests {
         let _ = GetCalendarResponse::default();
         assert_eq!(CALENDAR_GET, "lcars.calendar.get");
         assert_eq!(CALENDAR_UPDATED, "lcars.calendar.updated");
+    }
+
+    #[test]
+    fn training_audio_round_trips() {
         let training = PutTrainingAudioRequest {
             screen_id: "kitchen".into(),
             pcm: vec![0, 0, 1, 0],
