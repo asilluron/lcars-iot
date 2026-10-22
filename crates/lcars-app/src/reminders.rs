@@ -156,7 +156,7 @@ async fn request<R: Message + Default>(
     message: &impl Message,
 ) -> Result<R, String> {
     let reply = client
-        .request(subject, message.encode_to_vec().into())
+        .request(subject.to_owned(), message.encode_to_vec().into())
         .await
         .map_err(|err| err.to_string())?;
     if let Some(code) = reply
