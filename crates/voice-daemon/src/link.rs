@@ -71,13 +71,13 @@ impl Hub {
         if let Some(path) = &self.ca_path {
             options = options.add_root_certificates(path.clone());
         }
-        if let Some(path) = &self.creds_path {
-            if self.user.is_none() {
-                options = options
-                    .credentials_file(path)
-                    .await
-                    .map_err(|error| error.to_string())?;
-            }
+        if let Some(path) = &self.creds_path
+            && self.user.is_none()
+        {
+            options = options
+                .credentials_file(path)
+                .await
+                .map_err(|error| error.to_string())?;
         }
         if let (Some(user), Some(password)) = (&self.user, &self.password) {
             options = options.user_and_password(user.clone(), password.clone());

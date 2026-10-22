@@ -214,13 +214,13 @@ async fn connect(link: &AgendaLink) -> Result<async_nats::Client, String> {
     if let Some(path) = &link.ca_path {
         options = options.add_root_certificates(path.clone());
     }
-    if let Some(path) = &link.creds_path {
-        if link.user.is_none() {
-            options = options
-                .credentials_file(path)
-                .await
-                .map_err(|err: std::io::Error| err.to_string())?;
-        }
+    if let Some(path) = &link.creds_path
+        && link.user.is_none()
+    {
+        options = options
+            .credentials_file(path)
+            .await
+            .map_err(|err: std::io::Error| err.to_string())?;
     }
     if let (Some(user), Some(password)) = (&link.user, &link.password) {
         options = options.user_and_password(user.clone(), password.clone());
