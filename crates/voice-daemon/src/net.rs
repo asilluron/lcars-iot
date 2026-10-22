@@ -1,5 +1,8 @@
 //! Publish state and PCM on the hub. A down link drops audio; it is not queued.
+//! Training chunks are requested on `lcars.training.put` from a side task, so a
+//! slow upload does not stall wake-word audio.
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use async_nats::HeaderMap;
@@ -18,8 +21,14 @@ pub async fn run(
     hub: Hub,
     screen_id: String,
     mut inbound: tokio::sync::mpsc::Receiver<Outbound>,
+    training: tokio::sync::mpsc::Receiver<Vec<u8>>,
     cmd: std::sync::mpsc::Sender<Cmd>,
 ) {
+    let slot = Arc::new(Mutex::new(None));
+    let upload_slot = Arc::clone(&slot);
+    let upload_screen = screen_id.clone();
+    tokio::spawn(async move { upload_training(upload_slot, upload_screen, training).await });
+
     let mut client: Option<async_nats::Client> = None;
     let mut endpoint = None;
     let mut cancel = None;
@@ -29,6 +38,7 @@ pub async fn run(
             _ = retry.tick() => {
                 if client.is_none() {
                     connect(&hub, &screen_id, &mut client, &mut endpoint, &mut cancel).await;
+                    remember(&slot, &client);
                 }
             }
             item = inbound.recv() => {
@@ -39,6 +49,7 @@ pub async fn run(
                     client = None;
                     endpoint = None;
                     cancel = None;
+                    remember(&slot, &client);
                 }
             }
             message = next_message(&mut endpoint) => {
@@ -53,6 +64,7 @@ pub async fn run(
                         client = None;
                         endpoint = None;
                         cancel = None;
+                        remember(&slot, &client);
                     }
                 }
             }
@@ -68,11 +80,76 @@ pub async fn run(
                         client = None;
                         endpoint = None;
                         cancel = None;
+                        remember(&slot, &client);
                     }
                 }
             }
         }
     }
+}
+
+fn remember(slot: &Mutex<Option<async_nats::Client>>, client: &Option<async_nats::Client>) {
+    *slot.lock().expect("training client") = client.clone();
+}
+
+async fn upload_training(
+    slot: Arc<Mutex<Option<async_nats::Client>>>,
+    screen_id: String,
+    mut training: tokio::sync::mpsc::Receiver<Vec<u8>>,
+) {
+    let mut dropped = 0_u64;
+    while let Some(pcm) = training.recv().await {
+        let client = slot.lock().expect("training client").clone();
+        let Some(client) = client else {
+            note_drop(&mut dropped, "nats is down");
+            continue;
+        };
+        if let Err(error) = put_training(&client, &screen_id, pcm).await {
+            note_drop(&mut dropped, &error);
+        }
+    }
+}
+
+fn note_drop(dropped: &mut u64, error: &str) {
+    *dropped += 1;
+    if *dropped == 1 || dropped.is_multiple_of(60) {
+        tracing::warn!(dropped = *dropped, error, "dropped training audio");
+    }
+}
+
+async fn put_training(
+    client: &async_nats::Client,
+    screen_id: &str,
+    pcm: Vec<u8>,
+) -> Result<(), String> {
+    let request = lcars_api_proto::v1::PutTrainingAudioRequest {
+        screen_id: screen_id.to_string(),
+        pcm,
+    };
+    let reply = tokio::time::timeout(
+        Duration::from_secs(2),
+        client.request(
+            lcars_api_proto::TRAINING_PUT,
+            lcars_api_proto::encode(&request).into(),
+        ),
+    )
+    .await
+    .map_err(|_| "timed out".to_string())?
+    .map_err(|error| error.to_string())?;
+    if let Some(code) = reply
+        .headers
+        .as_ref()
+        .and_then(|headers| headers.get(lcars_api_proto::ERROR_CODE))
+    {
+        let msg = reply
+            .headers
+            .as_ref()
+            .and_then(|headers| headers.get(lcars_api_proto::ERROR))
+            .map(|value| value.as_str())
+            .unwrap_or("");
+        return Err(format!("{}: {msg}", code.as_str()));
+    }
+    Ok(())
 }
 
 async fn connect(

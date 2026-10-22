@@ -15,6 +15,7 @@ pub struct VoiceConfig {
     pub session: SessionSection,
     pub capture: CaptureSection,
     pub log: LogSection,
+    pub training: TrainingSection,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -63,6 +64,11 @@ pub struct LogSection {
     pub max_bytes: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TrainingSection {
+    pub stream_all: bool,
+}
+
 /// Values a `SIGHUP` is allowed to change.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LiveSettings {
@@ -71,6 +77,7 @@ pub struct LiveSettings {
     pub onset_ms: u64,
     pub silence_ms: u64,
     pub vad_threshold: f32,
+    pub stream_all: bool,
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -90,6 +97,8 @@ struct FileConfig {
     session: SessionFile,
     capture: CaptureFile,
     log: LogFile,
+    #[serde(default)]
+    training: TrainingFile,
 }
 
 #[derive(Deserialize)]
@@ -138,6 +147,12 @@ struct LogFile {
     max_bytes: u64,
 }
 
+#[derive(Deserialize, Default)]
+struct TrainingFile {
+    #[serde(default)]
+    stream_all: bool,
+}
+
 impl VoiceConfig {
     #[must_use]
     pub fn live(&self) -> LiveSettings {
@@ -147,6 +162,7 @@ impl VoiceConfig {
             onset_ms: self.gate.onset_ms,
             silence_ms: self.gate.silence_ms,
             vad_threshold: self.vad.threshold,
+            stream_all: self.training.stream_all,
         }
     }
 
@@ -156,6 +172,7 @@ impl VoiceConfig {
         self.verifier.threshold = fresh.verifier.threshold;
         self.gate = fresh.gate.clone();
         self.vad.threshold = fresh.vad.threshold;
+        self.training.stream_all = fresh.training.stream_all;
     }
 }
 
@@ -202,6 +219,9 @@ pub fn load(path: &Path) -> Result<VoiceConfig, ConfigError> {
             dir: resolve(base, file.log.dir),
             max_bytes: file.log.max_bytes,
         },
+        training: TrainingSection {
+            stream_all: file.training.stream_all,
+        },
     })
 }
 
@@ -233,7 +253,7 @@ fn resolve(base: &Path, path: PathBuf) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{VoiceConfig, load};
+    use super::load;
 
     #[test]
     fn sighup_keeps_model_paths_and_refreshes_thresholds() {
@@ -279,6 +299,7 @@ max_bytes = 524288000
         )
         .unwrap();
         let mut config = load(&path).unwrap();
+        assert!(!config.training.stream_all);
         let model = config.trigger.model.clone();
         std::fs::write(
             &path,
@@ -314,6 +335,9 @@ device = "auto"
 [log]
 dir = "/data/wake-log"
 max_bytes = 524288000
+
+[training]
+stream_all = true
 "#,
         )
         .unwrap();
@@ -325,7 +349,8 @@ max_bytes = 524288000
         assert_eq!(config.gate.onset_ms, 700);
         assert_eq!(config.gate.silence_ms, 500);
         assert!((config.vad.threshold - 0.6).abs() < f32::EPSILON);
-        let _ = VoiceConfig::live(&config);
+        assert!(config.training.stream_all);
+        assert!(config.live().stream_all);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

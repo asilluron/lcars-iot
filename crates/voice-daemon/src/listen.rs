@@ -58,6 +58,7 @@ pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(
     let (producer, consumer) = rtrb::RingBuffer::<i16>::new(HISTORY);
     let (cmd_tx, cmd_rx) = std::sync::mpsc::channel();
     let (out_tx, out_rx) = tokio::sync::mpsc::channel(QUEUE_DEPTH);
+    let (train_tx, train_rx) = tokio::sync::mpsc::channel(crate::training::QUEUE_DEPTH);
 
     let capture_cmd = cmd_tx.clone();
     let device = config.capture.device.clone();
@@ -73,7 +74,7 @@ pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(
             .enable_all()
             .build()
             .expect("nats runtime");
-        runtime.block_on(crate::net::run(hub, screen_id, out_rx, net_cmd));
+        runtime.block_on(crate::net::run(hub, screen_id, out_rx, train_rx, net_cmd));
     });
 
     detect(
@@ -82,6 +83,7 @@ pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(
         consumer,
         cmd_rx,
         out_tx,
+        train_tx,
         trigger,
         vad,
         verifier,
@@ -97,6 +99,7 @@ fn detect(
     mut consumer: Consumer<i16>,
     cmd_rx: Receiver<Cmd>,
     out_tx: Sender<Outbound>,
+    train_tx: Sender<Vec<u8>>,
     mut trigger: Trigger,
     mut vad: Vad,
     verifier: Verifier,
@@ -117,6 +120,8 @@ fn detect(
     let mut endpoint = false;
     let mut cancel = false;
     let mut dropped = 0_u64;
+    let mut training_dropped = 0_u64;
+    let mut training = crate::training::Batch::default();
 
     loop {
         while let Ok(cmd) = cmd_rx.try_recv() {
@@ -145,6 +150,7 @@ fn detect(
                     session = None;
                     idle_pending = false;
                     live_pending.clear();
+                    training.clear();
                     publish_state(&out_tx, &screen, Phase::MicOffline, "");
                 }
             }
@@ -164,6 +170,17 @@ fn detect(
 
         for sample in chunk {
             samples_seen += 1;
+            if let Some(pcm) = training.push(sample, config.training.stream_all)
+                && train_tx.try_send(pcm).is_err()
+            {
+                training_dropped += 1;
+                if training_dropped == 1 || training_dropped.is_multiple_of(60) {
+                    tracing::warn!(
+                        training_dropped,
+                        "dropped training audio; the hub is behind"
+                    );
+                }
+            }
             let now_ms = samples_seen * 1000 / u64::from(voice_proto::SAMPLE_RATE);
             push_history(&mut history, sample);
             vad_pending.push(sample);

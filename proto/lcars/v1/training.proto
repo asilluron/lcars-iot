@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// Training audio for the on-device wake word. The device sends captured PCM
+// on "lcars.training.put" while its stream_all flag is on. The server appends
+// it to an hourly WAV file in the configured training directory.
+package lcars.v1;
+
+option go_package = "github.com/asilluron/lcars-api/gen/go/lcars/v1;lcarsv1";
+
+// PutTrainingAudioRequest is one chunk of microphone audio. Send it as a
+// request on the subject "lcars.training.put"; the reply is a
+// PutTrainingAudioResponse.
+//
+// pcm is 16-bit signed little-endian mono at 16 kHz, and must be non-empty,
+// an even number of bytes, and at most 256 KiB. screen_id is a label only.
+// The server chooses the file name and ignores any path characters in it.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid request, 503 if training is
+// not configured, 500 otherwise) and "Nats-Service-Error" (a message).
+message PutTrainingAudioRequest {
+  // Device label, such as "kitchen". Characters outside [A-Za-z0-9_-], and
+  // values longer than 32 characters, are stored under the label "device".
+  string screen_id = 1;
+  // 16 kHz mono 16-bit PCM, little-endian. Not a WAV file.
+  bytes pcm = 2;
+}
+
+// PutTrainingAudioResponse reports how many pcm bytes were written.
+message PutTrainingAudioResponse {
+  // Bytes of pcm appended to the hourly WAV file.
+  uint32 accepted_bytes = 1;
+}
