@@ -29,8 +29,3 @@ device = "auto"
 [log]
 dir = "/data/wake-log"
 max_bytes = 524288000
-
-[training]
-# Send every captured sample to lcars.training.put. Leave this false except
-# while collecting audio for the wake-word model. SIGHUP reloads it.
-stream_all = false

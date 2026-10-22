@@ -176,6 +176,29 @@ impl VoiceConfig {
     }
 }
 
+/// `VOICE_STREAM_ALL` is the per-device switch. Balena device variables
+/// override the fleet value, so one screen can stream without the others.
+pub fn apply_stream_all_env(config: &mut VoiceConfig) -> Result<(), String> {
+    let Ok(value) = std::env::var("VOICE_STREAM_ALL") else {
+        return Ok(());
+    };
+    if value.is_empty() {
+        return Ok(());
+    }
+    config.training.stream_all = parse_stream_all(&value)?;
+    Ok(())
+}
+
+fn parse_stream_all(value: &str) -> Result<bool, String> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" => Ok(false),
+        _ => Err(format!(
+            "VOICE_STREAM_ALL: want true or false, got {value:?}"
+        )),
+    }
+}
+
 pub fn load(path: &Path) -> Result<VoiceConfig, ConfigError> {
     let text = fs::read_to_string(path).map_err(|error| ConfigError::Read {
         path: path.display().to_string(),
@@ -253,7 +276,7 @@ fn resolve(base: &Path, path: PathBuf) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::load;
+    use super::{load, parse_stream_all};
 
     #[test]
     fn sighup_keeps_model_paths_and_refreshes_thresholds() {
@@ -352,5 +375,16 @@ stream_all = true
         assert!(config.training.stream_all);
         assert!(config.live().stream_all);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn voice_stream_all_parses_balena_values() {
+        for value in ["true", "TRUE", "1", "yes", "on"] {
+            assert_eq!(parse_stream_all(value), Ok(true), "{value}");
+        }
+        for value in ["false", "0", "no", "off", " false "] {
+            assert_eq!(parse_stream_all(value), Ok(false), "{value}");
+        }
+        assert!(parse_stream_all("maybe").is_err());
     }
 }

@@ -35,10 +35,15 @@ struct OpenSession {
 }
 
 pub fn listen(mut config: VoiceConfig, hub: Hub, config_path: &Path) -> Result<(), String> {
-    apply_env(&mut config);
+    apply_env(&mut config)?;
     let trigger_hash = file_hash(&config.trigger.model);
     let verifier_hash = file_hash(&config.verifier.classifier);
-    tracing::info!(trigger = %trigger_hash, verifier = %verifier_hash, "models");
+    tracing::info!(
+        trigger = %trigger_hash,
+        verifier = %verifier_hash,
+        stream_all = config.training.stream_all,
+        "models"
+    );
 
     let trigger = Trigger::open(
         &config.trigger.model,
@@ -384,6 +389,7 @@ fn reload(
 ) -> Result<(), String> {
     let fresh = crate::config::load(path).map_err(|error| error.to_string())?;
     config.apply_live(&fresh);
+    apply_env(config)?;
     trigger.set_threshold(config.trigger.threshold)?;
     vad.set_threshold(config.vad.threshold)?;
     tracing::info!(
@@ -392,6 +398,7 @@ fn reload(
         onset_ms = config.gate.onset_ms,
         silence_ms = config.gate.silence_ms,
         vad = config.vad.threshold,
+        stream_all = config.training.stream_all,
         "config reloaded"
     );
     Ok(())
@@ -435,7 +442,7 @@ fn unix_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn apply_env(config: &mut VoiceConfig) {
+fn apply_env(config: &mut VoiceConfig) -> Result<(), String> {
     if let Some(dir) = std::env::var_os("VOICE_LOG_DIR") {
         config.log.dir = std::path::PathBuf::from(dir);
     }
@@ -445,6 +452,7 @@ fn apply_env(config: &mut VoiceConfig) {
             config.capture.device = device.into_owned();
         }
     }
+    crate::config::apply_stream_all_env(config)
 }
 
 fn watch_signals(cmd: std::sync::mpsc::Sender<Cmd>) {
