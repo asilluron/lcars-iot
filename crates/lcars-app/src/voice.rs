@@ -105,6 +105,18 @@ pub async fn watch(
     client: async_nats::Client,
     screen_id: String,
     weak: Weak<AppWindow>,
+    cancel: tokio::sync::broadcast::Receiver<()>,
+) {
+    render(&weak, &VoiceSnap::idle()).await;
+    let result = watch_inner(client, screen_id, weak.clone(), cancel).await;
+    render(&weak, &VoiceSnap::idle()).await;
+    result
+}
+
+async fn watch_inner(
+    client: async_nats::Client,
+    screen_id: String,
+    weak: Weak<AppWindow>,
     mut cancel: tokio::sync::broadcast::Receiver<()>,
 ) {
     let Ok(mut states) = client.subscribe(state_subject(&screen_id)).await else {

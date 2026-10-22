@@ -95,7 +95,7 @@ pub async fn run(
                 had_client = true;
                 tracing::info!("nats connected");
                 let _ = client_tx.send(Some(client.clone()));
-                let voice = tokio::spawn(crate::voice::watch(
+                let mut voice = tokio::spawn(crate::voice::watch(
                     client.clone(),
                     link.screen_id.clone(),
                     weak.clone(),
@@ -116,6 +116,14 @@ pub async fn run(
                             if client.connection_state() == async_nats::connection::State::Connected
                             {
                                 tokio::time::sleep(Duration::from_secs(5)).await;
+                                if voice.is_finished() {
+                                    voice = tokio::spawn(crate::voice::watch(
+                                        client.clone(),
+                                        link.screen_id.clone(),
+                                        weak.clone(),
+                                        voice_cancel.subscribe(),
+                                    ));
+                                }
                                 continue;
                             }
                             let _ = client_tx.send(None);
