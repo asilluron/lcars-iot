@@ -150,7 +150,7 @@ async fn set(client: &async_nats::Client, id: &str) -> Result<ListRemindersRespo
     .await
 }
 
-async fn request<R: Message>(
+async fn request<R: Message + Default>(
     client: &async_nats::Client,
     subject: &str,
     message: &impl Message,
