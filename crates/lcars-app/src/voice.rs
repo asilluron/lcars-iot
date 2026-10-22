@@ -107,10 +107,28 @@ pub async fn watch(
     weak: Weak<AppWindow>,
     cancel: tokio::sync::broadcast::Receiver<()>,
 ) {
-    render(&weak, &VoiceSnap::idle()).await;
+    clear_session_state(&weak).await;
     let result = watch_inner(client, screen_id, weak.clone(), cancel).await;
-    render(&weak, &VoiceSnap::idle()).await;
+    clear_session_state(&weak).await;
     result
+}
+
+async fn clear_session_state(weak: &Weak<AppWindow>) {
+    for _ in 0..100 {
+        let weak = weak.clone();
+        if lcars_ui::slint::invoke_from_event_loop(move || {
+            if let Some(app) = weak.upgrade() {
+                app.set_voice_band(false);
+                app.set_voice_phase("".into());
+                app.set_voice_text("".into());
+            }
+        })
+        .is_ok()
+        {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
 }
 
 async fn watch_inner(
