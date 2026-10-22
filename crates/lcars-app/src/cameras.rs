@@ -319,7 +319,6 @@ impl Session {
         let stamp = self.generation.fetch_add(1, Ordering::SeqCst) + 1;
         self.live = None;
         self.live_sn = Some(camera.sn.clone());
-        self.catalog_status = "LINKING".into();
         let _ = post(
             &self.weak,
             UiUpdate {
@@ -376,10 +375,11 @@ impl Session {
     }
 
     async fn publish(&self, cards: bool) {
+        // The play task owns the status line while a stream is open.
         let _ = post(
             &self.weak,
             UiUpdate {
-                status: Some(self.catalog_status.clone()),
+                status: self.live_sn.is_none().then(|| self.catalog_status.clone()),
                 cards: cards.then(|| self.shown.clone()),
                 live_open: None,
                 live_name: None,
@@ -1279,25 +1279,33 @@ mod tests {
             .await
             .map_err(|error| error.to_string())?;
         let publisher = client.clone();
+        let lists = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let listed = std::sync::Arc::clone(&lists);
         let responder = tokio::spawn(async move {
             use futures::StreamExt;
             use lcars_api_proto::prost::Message;
             use lcars_api_proto::v1::{Camera, ListCamerasResponse};
             while let Some(message) = subscription.next().await {
                 let Some(reply) = message.reply else { continue };
+                let n = listed.load(std::sync::atomic::Ordering::SeqCst) + 1;
                 let body = ListCamerasResponse {
                     cameras: vec![Camera {
                         sn: "CAM1".into(),
-                        name: "Front door".into(),
+                        name: if n == 1 {
+                            "Front door".into()
+                        } else {
+                            "Garage".into()
+                        },
                         has_camera: true,
                         stream_path: "/cameras/CAM1/stream".into(),
                         snapshot_path: "/cameras/CAM1/snapshot".into(),
                     }],
                 };
                 let _ = publisher.publish(reply, body.encode_to_vec().into()).await;
+                listed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             }
         });
-        let (client_tx, client_rx) = tokio::sync::watch::channel(Some(client.clone()));
+        let (client_tx, client_rx) = tokio::sync::watch::channel(None);
         let session = tokio::spawn(super::run(
             client_rx,
             Some(super::HttpConfig {
@@ -1308,12 +1316,26 @@ mod tests {
             commands_rx,
             weak.clone(),
         ));
-        let _ = client_tx;
+        client_tx
+            .send(Some(client.clone()))
+            .map_err(|error| error.to_string())?;
         wait_card(weak, "CAM1", true).await?;
         on_ui(weak, |app| app.invoke_open_camera("CAM1".into()))?;
         wait_stream(&gate).await?;
+        wait_status(weak, "LIVE").await?;
+        let seen = lists.load(std::sync::atomic::Ordering::SeqCst);
+        client_tx
+            .send(Some(client.clone()))
+            .map_err(|error| error.to_string())?;
+        wait_lists(&lists, seen).await?;
+        wait_card_name(weak, "Garage").await?;
+        let status = camera_status(weak)?;
+        if status != "LIVE" {
+            return Err(format!("catalog refresh replaced LIVE with {status}"));
+        }
         on_ui(weak, |app| app.invoke_close_live())?;
         wait_closed(&gate).await?;
+        wait_status(weak, "1 CAMERA").await?;
         if let Some(expected) = gate.expect.as_deref() {
             let got = gate.authorization.lock().expect("auth").clone();
             if got.as_deref() != Some(expected) {
@@ -1405,6 +1427,81 @@ mod tests {
             }
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
+    }
+
+    async fn wait_card_name(
+        weak: &lcars_ui::slint::Weak<lcars_ui::AppWindow>,
+        name: &str,
+    ) -> Result<(), String> {
+        let want = name.to_string();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        loop {
+            let weak = weak.clone();
+            let want = want.clone();
+            let (tx, rx) = std::sync::mpsc::channel();
+            lcars_ui::slint::invoke_from_event_loop(move || {
+                use lcars_ui::slint::Model;
+                let found = weak.upgrade().is_some_and(|app| {
+                    let cards = app.get_cameras();
+                    (0..cards.row_count()).any(|index| {
+                        cards
+                            .row_data(index)
+                            .is_some_and(|card| card.name.as_str() == want)
+                    })
+                });
+                let _ = tx.send(found);
+            })
+            .map_err(|error| error.to_string())?;
+            if rx.recv().unwrap_or(false) {
+                return Ok(());
+            }
+            if std::time::Instant::now() > deadline {
+                return Err(format!("camera card {name} did not appear"));
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    }
+
+    fn camera_status(weak: &lcars_ui::slint::Weak<lcars_ui::AppWindow>) -> Result<String, String> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let weak = weak.clone();
+        lcars_ui::slint::invoke_from_event_loop(move || {
+            let _ = tx.send(
+                weak.upgrade()
+                    .map(|app| app.get_camera_status().to_string()),
+            );
+        })
+        .map_err(|error| error.to_string())?;
+        rx.recv()
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| "window closed".into())
+    }
+
+    async fn wait_status(
+        weak: &lcars_ui::slint::Weak<lcars_ui::AppWindow>,
+        want: &str,
+    ) -> Result<(), String> {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        loop {
+            if camera_status(weak)? == want {
+                return Ok(());
+            }
+            if std::time::Instant::now() > deadline {
+                return Err(format!("camera status did not become {want}"));
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    }
+
+    async fn wait_lists(lists: &std::sync::atomic::AtomicU32, seen: u32) -> Result<(), String> {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while lists.load(std::sync::atomic::Ordering::SeqCst) <= seen {
+            if std::time::Instant::now() > deadline {
+                return Err("catalog did not refresh during the live view".into());
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        Ok(())
     }
 
     async fn wait_stream(gate: &Gate) -> Result<(), String> {
