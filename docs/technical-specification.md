@@ -397,6 +397,7 @@ Configuration has two tiers: bootstrap settings in balena environment variables,
 | `NIGHT_WINDOW` | `22:00-06:00` | Night brightness and quiet audio |
 | `AUDIO_ENABLED` / `AUDIO_VOLUME` | `1` / `60` | Sound effects |
 | `LOG_LEVEL` | `info` | `tracing` filter |
+| `TZ` | `America/Denver` | Clock zone until a calendar reply names the server zone. Unset means Mountain time |
 
 ### Layout
 

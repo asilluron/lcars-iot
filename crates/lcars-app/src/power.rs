@@ -100,23 +100,45 @@ pub fn in_night(minute_of_day: u16, start: u16, end: u16) -> bool {
 }
 
 pub fn write_brightness(pct: u32) {
-    let Ok(dir) = std::env::var("LCARS_BACKLIGHT") else {
+    let Some(dir) = backlight_dir() else {
+        tracing::info!("no backlight control; night mode keeps the on-screen palette");
         return;
     };
-    let max = std::fs::read_to_string(format!("{dir}/max_brightness"))
+    let max = std::fs::read_to_string(dir.join("max_brightness"))
         .ok()
         .and_then(|text| text.trim().parse::<u32>().ok())
-        .unwrap_or(255)
-        .max(1);
-    let value = u32::try_from(u64::from(pct.min(100)) * u64::from(max) / 100).unwrap_or(0);
-    if let Err(error) = std::fs::write(format!("{dir}/brightness"), value.to_string()) {
-        tracing::debug!(%error, "backlight write failed");
+        .unwrap_or(255);
+    let value = brightness_level(pct, max);
+    if let Err(error) = std::fs::write(dir.join("brightness"), value.to_string()) {
+        tracing::info!(%error, path = %dir.display(), "backlight write failed");
+        return;
     }
+    tracing::info!(pct, value, path = %dir.display(), "panel brightness");
+}
+
+/// `LCARS_BACKLIGHT` wins. Otherwise the first sysfs backlight that can be written.
+fn backlight_dir() -> Option<std::path::PathBuf> {
+    if let Ok(dir) = std::env::var("LCARS_BACKLIGHT")
+        && !dir.is_empty()
+    {
+        return Some(std::path::PathBuf::from(dir));
+    }
+    let entries = std::fs::read_dir("/sys/class/backlight").ok()?;
+    entries
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| path.join("brightness").is_file() && path.join("max_brightness").is_file())
+}
+
+#[must_use]
+pub fn brightness_level(pct: u32, max: u32) -> u32 {
+    let max = max.max(1);
+    u32::try_from(u64::from(pct.min(100)) * u64::from(max) / 100).unwrap_or(0)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DisplayPower, PowerPhase, PowerPolicy, TouchEffect, in_night};
+    use super::{DisplayPower, PowerPhase, PowerPolicy, TouchEffect, brightness_level, in_night};
     use std::time::{Duration, Instant};
 
     fn policy() -> PowerPolicy {
@@ -155,6 +177,14 @@ mod tests {
         power.critical(start + Duration::from_secs(700));
         assert_eq!(power.phase(), PowerPhase::Active);
         assert_eq!(power.brightness(true), 30);
+    }
+
+    #[test]
+    fn brightness_level_scales_to_the_panel_max() {
+        assert_eq!(brightness_level(100, 255), 255);
+        assert_eq!(brightness_level(0, 255), 0);
+        assert_eq!(brightness_level(28, 255), 71);
+        assert_eq!(brightness_level(150, 100), 100);
     }
 
     #[test]

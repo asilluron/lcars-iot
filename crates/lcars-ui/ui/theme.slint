@@ -1,4 +1,5 @@
 export global Theme {
+    in-out property <bool> night: false;
     in-out property <color> bg: #000000;
     in-out property <color> accent-1: #FF9966;
     in-out property <color> accent-2: #CC99CC;
@@ -22,4 +23,27 @@ export global Theme {
     in-out property <float> scale: 1.0;
     in-out property <length> sidebar-width: 220px;
     in-out property <length> header-height: 80px;
+
+    // Ultraviolet night: violet bars, magenta lanes, cyan highlights on a near-black field.
+    public function set-night(on: bool) {
+        Theme.night = on;
+        Theme.bg = on ? #05010c : #000000;
+        Theme.accent-1 = on ? #c084fc : #FF9966;
+        Theme.accent-2 = on ? #e879f9 : #CC99CC;
+        Theme.accent-3 = on ? #67e8f9 : #9999FF;
+        Theme.accent-4 = on ? #d4b3ff : #FFCC99;
+        Theme.alert = on ? #ff4d6a : #CC4444;
+        Theme.text-on-accent = on ? #14081c : #000000;
+        Theme.blue = on ? #67e8f9 : #9ba4ff;
+        Theme.orange = on ? #c084fc : #ff9c34;
+        Theme.peach = on ? #f0abfc : #fec893;
+        Theme.purple = on ? #e879f9 : #c79adf;
+        Theme.cream = on ? #ddd6fe : #ffe6be;
+        Theme.cream-text = on ? #e9e4ff : #f3e6d4;
+        Theme.gold = on ? #67e8f9 : #f5d454;
+        Theme.done = on ? #5eead4 : #75db9a;
+        Theme.ink = on ? #14081c : #141414;
+        Theme.mute = on ? #1a1028 : #2a2733;
+        Theme.dim-text = on ? #9b8bb4 : #b7a99a;
+    }
 }

@@ -2,8 +2,10 @@
 //!
 //! Clips are decoded once at startup and mixed into an output stream that stays
 //! open. A press only enqueues samples, so it does not pay for a new `afplay` or
-//! `aplay` process. The stream asks for a 5 ms period. On the Pi, cpal talks to
-//! ALSA and prefers the panel's USB audio device, then the connected HDMI port.
+//! `aplay` process. The ALSA buffer is at least 50 ms: a 5 ms buffer was split
+//! into a ~1 ms period on HDMI and the stream underran before the first cue.
+//! On the Pi, cpal talks to ALSA and prefers the panel's USB audio device, then
+//! the connected HDMI port.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -140,7 +142,7 @@ impl Engine {
 
 fn open_sink(device: cpal::Device) -> Result<OutputStream, String> {
     let label = device_name(&device);
-    let frames = output_period(&device);
+    let frames = output_buffer(&device);
     let config = device
         .default_output_config()
         .map_err(|error| error.to_string())?;
@@ -153,7 +155,7 @@ fn open_sink(device: cpal::Device) -> Result<OutputStream, String> {
     let mut sink = match opened {
         Ok(sink) => sink,
         Err(error) => {
-            tracing::warn!(%error, frames, device = %label, "short audio period was rejected");
+            tracing::warn!(%error, frames, device = %label, "audio buffer was rejected");
             OutputStreamBuilder::from_device(device)
                 .map_err(|error| error.to_string())?
                 .with_error_callback(|error| tracing::warn!(%error, "audio output"))
@@ -169,6 +171,7 @@ fn open_sink(device: cpal::Device) -> Result<OutputStream, String> {
 fn pick_device(host: &cpal::Host) -> Option<cpal::Device> {
     let devices: Vec<cpal::Device> = host.output_devices().ok()?.collect();
     let names: Vec<String> = devices.iter().map(device_name).collect();
+    tracing::info!(devices = ?names, "audio devices");
     let labels: Vec<&str> = names.iter().map(String::as_str).collect();
     let cards = std::fs::read_to_string("/proc/asound/cards")
         .map(|text| parse_cards(&text))
@@ -188,6 +191,15 @@ fn pick_device(host: &cpal::Host) -> Option<cpal::Device> {
 
 fn device_name(device: &cpal::Device) -> String {
     device.name().unwrap_or_else(|_| "audio".to_string())
+}
+
+fn output_buffer(device: &cpal::Device) -> u32 {
+    let period = output_period(device);
+    let rate = device
+        .default_output_config()
+        .map(|config| config.sample_rate().0)
+        .unwrap_or(48_000);
+    stream_buffer(period, rate)
 }
 
 fn output_period(device: &cpal::Device) -> u32 {
@@ -221,6 +233,13 @@ fn period_frames(rate: u32, min: u32, max: u32) -> u32 {
         return want.max(1);
     }
     want.clamp(min, max).max(1)
+}
+
+/// ALSA treats the requested size as the whole buffer and divides it into
+/// periods. Keep at least 50 ms so HDMI does not underrun.
+fn stream_buffer(period: u32, rate: u32) -> u32 {
+    let floor = rate.saturating_mul(50) / 1000;
+    period.saturating_mul(4).max(floor).max(1)
 }
 
 fn load_clips() -> HashMap<&'static str, Clip> {
@@ -456,7 +475,7 @@ fn card_blob(card: &SoundCard) -> String {
 mod tests {
     use super::{
         choose_device, cue_file, decode_wav, parse_cards, period_frames, playback_volume,
-        resolve_device_index, scale_samples,
+        resolve_device_index, scale_samples, stream_buffer,
     };
 
     #[test]
@@ -513,6 +532,13 @@ mod tests {
         assert_eq!(period_frames(48_000, 32, 4_096), 240);
         assert_eq!(period_frames(48_000, 256, 4_096), 256);
         assert_eq!(period_frames(44_100, 15, 4_096), 220);
+    }
+
+    #[test]
+    fn hdmi_buffer_is_at_least_fifty_milliseconds() {
+        assert_eq!(stream_buffer(220, 44_100), 2_205);
+        assert_eq!(stream_buffer(240, 48_000), 2_400);
+        assert!(stream_buffer(8_000, 48_000) >= 8_000);
     }
 
     #[test]

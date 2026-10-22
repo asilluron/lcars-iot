@@ -4,6 +4,7 @@ import { HomeScreen, DayItem, EventItem } from "home.slint";
 import { AlertOverlay } from "alert-overlay.slint";
 import { PinPad } from "pin-pad.slint";
 import { DiagnosticsOverlay } from "diagnostics-overlay.slint";
+import { VoiceBand, MicChip } from "voice-band.slint";
 
 import "../../../assets/fonts/Antonio-Variable.ttf";
 
@@ -62,13 +63,13 @@ export component AppWindow inherits Window {
     in-out property <string> now-label: "NOW 10:42 AM";
     in-out property <string> week-label: "WEEK 43";
     in-out property <[DayItem]> days: [
-        { num: "21", name: "WED", dots: 5, count: 5, accent: Theme.cream },
-        { num: "22", name: "THU", dots: 3, count: 3, accent: Theme.blue },
-        { num: "23", name: "FRI", dots: 2, count: 2, accent: Theme.blue },
-        { num: "24", name: "SAT", dots: 4, count: 4, accent: Theme.purple },
-        { num: "25", name: "SUN", dots: 1, count: 1, accent: Theme.purple },
-        { num: "26", name: "MON", dots: 3, count: 3, accent: Theme.blue },
-        { num: "27", name: "TUE", dots: 2, count: 2, accent: Theme.blue },
+        { num: "21", name: "WED", dots: 5, count: 5, accent: Theme.cream, today: true, weekend: false },
+        { num: "22", name: "THU", dots: 3, count: 3, accent: Theme.blue, today: false, weekend: false },
+        { num: "23", name: "FRI", dots: 2, count: 2, accent: Theme.blue, today: false, weekend: false },
+        { num: "24", name: "SAT", dots: 4, count: 4, accent: Theme.purple, today: false, weekend: true },
+        { num: "25", name: "SUN", dots: 1, count: 1, accent: Theme.purple, today: false, weekend: true },
+        { num: "26", name: "MON", dots: 3, count: 3, accent: Theme.blue, today: false, weekend: false },
+        { num: "27", name: "TUE", dots: 2, count: 2, accent: Theme.blue, today: false, weekend: false },
     ];
     in-out property <[string]> day-heads: [
         "WED 21 OCT",
@@ -110,6 +111,13 @@ export component AppWindow inherits Window {
     callback pin-cancelled();
     callback woke();
     callback pressed(string);
+    callback night-changed(bool);
+    callback voice-cancelled();
+
+    in-out property <bool> voice-band: false;
+    in-out property <string> voice-phase: "";
+    in-out property <string> voice-text: "";
+    in-out property <bool> voice-offline: false;
 
     HomeScreen {
         width: 100%;
@@ -126,9 +134,24 @@ export component AppWindow inherits Window {
         sync-label: root.status;
         week-label: root.week-label;
         pressed(kind) => { root.pressed(kind); }
+        night-changed(on) => { root.night-changed(on); }
     }
 
-    if root.screen-off && !root.alert-visible: Rectangle {
+    if root.voice-offline: MicChip {
+        x: parent.width - self.width - 16px;
+        y: 16px;
+    }
+
+    if root.voice-band: VoiceBand {
+        x: 156px;
+        y: parent.height - self.height - 12px;
+        width: parent.width - 172px;
+        phase: root.voice-phase;
+        text: root.voice-text;
+        cancel => { root.voice-cancelled(); }
+    }
+
+    if root.screen-off && !root.alert-visible && !root.voice-band && !root.voice-offline: Rectangle {
         width: 100%;
         height: 100%;
         background: black;
