@@ -432,7 +432,10 @@ fn tail(samples: &[i16], count: usize) -> &[i16] {
 }
 
 fn session_matches(open: Option<&str>, requested: &str) -> bool {
-    requested.is_empty() || open == Some(requested)
+    match open {
+        Some(id) => requested.is_empty() || id == requested,
+        None => false,
+    }
 }
 
 fn unix_ms() -> i64 {

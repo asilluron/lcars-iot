@@ -105,6 +105,36 @@ pub async fn watch(
     client: async_nats::Client,
     screen_id: String,
     weak: Weak<AppWindow>,
+    cancel: tokio::sync::broadcast::Receiver<()>,
+) {
+    clear_session_state(&weak).await;
+    let result = watch_inner(client, screen_id, weak.clone(), cancel).await;
+    clear_session_state(&weak).await;
+    result
+}
+
+async fn clear_session_state(weak: &Weak<AppWindow>) {
+    for _ in 0..100 {
+        let weak = weak.clone();
+        if lcars_ui::slint::invoke_from_event_loop(move || {
+            if let Some(app) = weak.upgrade() {
+                app.set_voice_band(false);
+                app.set_voice_phase("".into());
+                app.set_voice_text("".into());
+            }
+        })
+        .is_ok()
+        {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
+async fn watch_inner(
+    client: async_nats::Client,
+    screen_id: String,
+    weak: Weak<AppWindow>,
     mut cancel: tokio::sync::broadcast::Receiver<()>,
 ) {
     let Ok(mut states) = client.subscribe(state_subject(&screen_id)).await else {
