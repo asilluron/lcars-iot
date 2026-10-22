@@ -1,0 +1,31 @@
+[trigger]
+threshold = 0.85
+sliding_window = 3
+model = "models/computer.tflite"
+
+[verifier]
+threshold = 0.5
+melspectrogram = "models/melspectrogram.onnx"
+embedding = "models/embedding_model.onnx"
+classifier = "models/computer-verifier.onnx"
+
+[gate]
+onset_ms = 650
+silence_ms = 400
+
+[vad]
+threshold = 0.5
+model = "models/silero_vad.onnx"
+
+[session]
+silence_end_ms = 8000
+hard_cap_ms = 30000
+cooldown_ms = 1500
+preroll_ms = 1500
+
+[capture]
+device = "auto"
+
+[log]
+dir = "/data/wake-log"
+max_bytes = 524288000

@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+// Package voice.v1 is the device side of wake-word activation.
+//
+// The Pi publishes state and raw audio. The home server publishes transcripts
+// and the endpoint. Audio frames are not protobuf: they are 640-byte PCM
+// payloads (20 ms, 16 kHz, 16-bit mono) with NATS headers Session-Id, Seq,
+// and Kind (preroll or live).
+//
+// Compatibility rules: never change or reuse a field number, and never change
+// a field's type. Add new fields with new numbers instead.
+package voice.v1;
+
+option go_package = "github.com/asilluron/lcars-iot/gen/go/voice/v1;voicev1";
+
+// Phase is what the panel should draw for the microphone.
+enum Phase {
+  PHASE_UNSPECIFIED = 0;
+  IDLE = 1;
+  LISTENING = 2;
+  STREAMING = 3;
+  PROCESSING = 4;
+  MIC_OFFLINE = 5;
+}
+
+// VoiceState is published on voice.state.<screen_id> by the voice daemon.
+message VoiceState {
+  Phase phase = 1;
+  // Empty when no session is open.
+  string session_id = 2;
+  // When this state was decided, in milliseconds since the Unix epoch.
+  int64 unix_ms = 3;
+  string screen_id = 4;
+}
+
+// SessionStart opens a streaming session. It is published before the first
+// PCM frame on voice.session.start.<screen_id>.
+message SessionStart {
+  string session_id = 1;
+  string screen_id = 2;
+  int64 unix_ms = 3;
+  // SHA-256 of the trigger model file.
+  string trigger_model_hash = 4;
+  // SHA-256 of the verifier classifier, or "absent" when none is loaded.
+  string verifier_model_hash = 5;
+  float trigger_threshold = 6;
+  float verifier_threshold = 7;
+  float trigger_score = 8;
+  float verifier_score = 9;
+}
+
+// SessionEndpoint is published by the server on
+// voice.session.endpoint.<screen_id> when the utterance should stop.
+message SessionEndpoint {
+  string session_id = 1;
+  string screen_id = 2;
+  int64 unix_ms = 3;
+}
+
+// SessionCancel is published by the panel on
+// voice.session.cancel.<screen_id> when the person dismisses listening.
+message SessionCancel {
+  string session_id = 1;
+  string screen_id = 2;
+  int64 unix_ms = 3;
+}
+
+// Transcript is a partial or final recognition. Partials use
+// transcript.partial.<screen_id>. The final text uses
+// transcript.final.<screen_id>.
+message Transcript {
+  string session_id = 1;
+  string screen_id = 2;
+  string text = 3;
+  int64 unix_ms = 4;
+}

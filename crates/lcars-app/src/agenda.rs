@@ -22,6 +22,7 @@ pub struct AgendaLink {
     pub ca_path: Option<PathBuf>,
     pub creds_path: Option<PathBuf>,
     pub require_tls: bool,
+    pub screen_id: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,7 +72,11 @@ pub fn paint(app: &AppWindow, status: &str, model: Option<AgendaModel>) {
     )));
 }
 
-pub async fn run(link: AgendaLink, weak: Weak<AppWindow>) {
+pub async fn run(
+    link: AgendaLink,
+    weak: Weak<AppWindow>,
+    voice_cancel: tokio::sync::broadcast::Sender<()>,
+) {
     let mut attempt = 0_u32;
     let mut had_calendar = false;
     loop {
@@ -82,21 +87,39 @@ pub async fn run(link: AgendaLink, weak: Weak<AppWindow>) {
             Ok(client) => {
                 attempt = 0;
                 tracing::info!("nats connected");
-                match session(&client, &weak, &mut had_calendar).await {
-                    Ok(()) => return,
-                    Err(error) => {
-                        tracing::warn!(error = %error, "calendar session ended");
-                        let status = status_for(&error);
-                        post(&weak, &status, None).await;
+                let voice = tokio::spawn(crate::voice::watch(
+                    client.clone(),
+                    link.screen_id.clone(),
+                    weak.clone(),
+                    voice_cancel.subscribe(),
+                ));
+                loop {
+                    match session(&client, &weak, &mut had_calendar).await {
+                        Ok(()) => {
+                            voice.abort();
+                            return;
+                        }
+                        Err(error) => {
+                            tracing::warn!(error = %error, "calendar session ended");
+                            let status = status_for(&error);
+                            post(&weak, &status, None).await;
+                            if client.connection_state()
+                                == async_nats::connection::State::Disconnected
+                            {
+                                break;
+                            }
+                            tokio::time::sleep(Duration::from_secs(5)).await;
+                        }
                     }
                 }
+                voice.abort();
             }
             Err(error) => {
                 tracing::warn!(error = %error, "nats connect failed");
                 let model = if had_calendar {
                     None
                 } else {
-                    Some(local_week(chrono::Local::now().date_naive()))
+                    Some(local_week(crate::clock::now().date_naive()))
                 };
                 post(&weak, "NO LINK", model).await;
             }
@@ -120,7 +143,8 @@ async fn session(
     loop {
         let calendar = fetch(client).await?;
         *had_calendar = true;
-        let now = chrono::Local::now();
+        crate::clock::adopt_server(&calendar.timezone);
+        let now = crate::clock::now();
         let model = project(&calendar, now.time());
         let synced = clock_label(now.hour(), now.minute());
         post(weak, &format!("SYNCED {synced}"), Some(model)).await;
@@ -506,6 +530,8 @@ fn day_item(day: DayRow) -> DayItem {
         name: day.name.into(),
         dots: day.dots,
         count: day.count,
+        today: day.today,
+        weekend: day.weekend,
         accent: if day.today {
             Color::from_rgb_u8(0xff, 0xe6, 0xbe)
         } else if day.weekend {

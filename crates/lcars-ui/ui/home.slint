@@ -6,6 +6,8 @@ export struct DayItem {
     dots: int,
     count: int,
     accent: color,
+    today: bool,
+    weekend: bool,
 }
 
 export struct EventItem {
@@ -118,13 +120,21 @@ component EventRow inherits Rectangle {
     height: 56px;
     background: transparent;
 
+    function lane-accent(lane: string) -> color {
+        if (lane == "work") { return Theme.blue; }
+        if (lane == "band") { return Theme.orange; }
+        if (lane == "personal") { return Theme.peach; }
+        if (lane == "house") { return Theme.purple; }
+        return Theme.accent-1;
+    }
+
     Pressable {
         x: 0;
         y: 4px;
         width: 118px;
         height: 48px;
         radius: 24px;
-        accent: root.event.accent;
+        accent: root.lane-accent(root.event.lane);
         selected: root.selected;
         clicked => { root.clicked(); }
 
@@ -203,7 +213,7 @@ component EventRow inherits Rectangle {
         width: 84px;
         height: 40px;
         radius: 20px;
-        accent: root.event.accent;
+        accent: root.lane-accent(root.event.lane);
         selected: root.selected;
         clicked => { root.clicked(); }
 
@@ -363,11 +373,12 @@ export component HomeScreen inherits Rectangle {
     in property <string> sync-label: "LOCAL";
     in property <string> week-label: "WEEK";
     callback pressed(string);
+    callback night-changed(bool);
 
     background: Theme.bg;
 
     in-out property <int> section: 0;
-    in-out property <bool> display-night: true;
+    in-out property <bool> display-night: false;
     in-out property <int> selected-day: 0;
     in-out property <int> selected-event: 0;
     in-out property <bool> lane-work: true;
@@ -428,11 +439,13 @@ export component HomeScreen inherits Rectangle {
         width: 128px;
         height: 76px;
         index: "";
-        label: root.display-night ? "NIGHT" : "DAY";
-        accent: root.display-night ? Theme.blue : Theme.cream;
+        label: root.display-night ? "DAY" : "NIGHT";
+        accent: root.display-night ? Theme.cream : Theme.purple;
         clicked => {
             root.display-night = !root.display-night;
-            root.notice = root.display-night ? "DISPLAY NIGHT" : "DISPLAY DAY";
+            Theme.set-night(root.display-night);
+            root.notice = root.display-night ? "UV NIGHT" : "DISPLAY DAY";
+            root.night-changed(root.display-night);
             root.pressed("setting");
         }
 
@@ -730,7 +743,7 @@ export component HomeScreen inherits Rectangle {
                 num: day.num;
                 name: day.name;
                 dots: day.dots;
-                accent: day.accent;
+                accent: day.today ? Theme.cream : day.weekend ? Theme.purple : Theme.blue;
                 cream-when-selected: true;
                 selected: root.selected-day == index;
                 clicked => {
@@ -1070,5 +1083,15 @@ export component HomeScreen inherits Rectangle {
                 }
             }
         }
+    }
+
+    Rectangle {
+        x: 148px;
+        y: 0px;
+        width: parent.width - 148px;
+        height: 100%;
+        visible: root.display-night;
+        background: #000000;
+        opacity: 0.18;
     }
 }

@@ -13,12 +13,43 @@ services:
     labels:
       io.balena.update.strategy: download-then-kill
       io.balena.features.sysfs: "1"
+      # Host /proc lets the entrypoint see /proc/1/root/run/udev and bind it.
+      io.balena.features.procfs: "1"
     environment:
       UDEV: "1"
+      TZ: America/Denver
       SLINT_BACKEND: linuxkms-femtovg
       LCARS_ASSETS: /opt/lcars/assets
+      # Keep button cues off the mic array. Override with a USB DAC name if
+      # the panel has one.
+      AUDIO_DEVICE: hdmi
     healthcheck:
       test: ["CMD-SHELL", "[ $(( $(date +%s) - $(stat -c %Y /run/lcars/heartbeat) )) -lt 10 ]"]
       interval: 5s
       retries: 2
       start_period: 15s
+  voice:
+    build:
+      context: .
+      dockerfile: voice/Dockerfile
+    restart: always
+    network_mode: host
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio:
+        soft: 50
+        hard: 50
+    devices:
+      - "/dev/snd:/dev/snd"
+    labels:
+      io.balena.features.sysfs: "1"
+    environment:
+      TZ: America/Denver
+      VOICE_CONFIG: /opt/voice/voice.toml
+      VOICE_LOG_DIR: /data/wake-log
+      VOICE_ALSA_DEVICE: auto
+    volumes:
+      - voice-data:/data
+volumes:
+  voice-data:

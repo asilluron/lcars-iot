@@ -1,0 +1,17 @@
+computer.tflite and computer.json
+  Community V2 "computer" microWakeWord model by Leland Olney.
+  https://github.com/JohnnyPrimus/Custom_V2_MicroWakeWords
+  Apache-2.0
+
+silero_vad.onnx
+  Silero VAD weights exported by k2-fsa/sherpa-onnx.
+  https://github.com/k2-fsa/sherpa-onnx
+  The export is Apache-2.0. Silero VAD itself is MIT.
+
+melspectrogram.onnx and embedding_model.onnx
+  openWakeWord shared frontend by David Scripka, copied from the oww-rs tree.
+  https://github.com/dscripka/openWakeWord
+  Apache-2.0
+
+The "computer" verifier classifier is not included. The daemon rejects every
+trigger until that ONNX file is present at the path in voice.toml.

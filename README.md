@@ -23,7 +23,7 @@ On macOS the same binary opens a 1024×600 window with the winit backend:
 cargo run -p lcars-app
 ```
 
-The calendar home is drawn locally until `NATS_URL` is set. With that set, the screen requests `lcars.calendar.get` from lcars-api and refreshes when `lcars.calendar.updated` arrives. A `tls://` URL also needs `NATS_CA_B64` (base64 PEM) or `NATS_CA_FILE` (path to the PEM). The orange status pill shows `LINKING`, `SYNCED`, `NO LINK`, or `NO CALENDAR`. Every control brightens while pressed and plays a short cue from `assets/sounds`. `AUDIO_ENABLED=0` mutes the cues.
+The clock is Mountain time (`America/Denver`) until a calendar reply includes the server's timezone. The calendar home is drawn locally until `NATS_URL` is set. With that set, the screen requests `lcars.calendar.get` from lcars-api and refreshes when `lcars.calendar.updated` arrives. A `tls://` URL also needs `NATS_CA_B64` (base64 PEM) or `NATS_CA_FILE` (path to the PEM). The orange status pill shows `LINKING`, `SYNCED`, `NO LINK`, or `NO CALENDAR`. Every control brightens while pressed and plays a short cue from `assets/sounds`. `AUDIO_ENABLED=0` mutes the cues.
 
 The Pi 5 image uses this same binary with `SLINT_BACKEND=linuxkms-femtovg` on the 1024×600 panel. Build it with `balena push <fleet>` from the repo root.
 

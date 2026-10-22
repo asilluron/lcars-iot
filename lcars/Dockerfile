@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 COPY . .
 RUN cargo build --release --locked -p lcars-app
+COPY lcars/bind-udev.c /tmp/bind-udev.c
+RUN gcc -O2 -o /tmp/bind-udev /tmp/bind-udev.c
 
 # ---- runtime ----
 FROM debian:trixie-slim
@@ -16,5 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/target/release/lcars-app /usr/local/bin/lcars-app
+COPY --from=build /tmp/bind-udev /usr/local/bin/bind-udev
 COPY assets/ /opt/lcars/assets/
-CMD ["/usr/local/bin/lcars-app"]
+COPY lcars/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/bind-udev
+CMD ["/usr/local/bin/entrypoint.sh"]
