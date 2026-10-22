@@ -389,6 +389,8 @@ Configuration has two tiers: bootstrap settings in balena environment variables,
 | `NATS_URL` | `tls://192.0.2.10:4222` | Broker address; comma-separated list for a cluster |
 | `NATS_CREDS_B64` | base64 of the `.creds` file | Per-screen credentials, written to tmpfs at start |
 | `NATS_CA_B64` | base64 of the CA cert | Trust anchor for the private CA |
+| `LCARS_DEVICE_USER` | device token id | NATS username when lcars-api requires a device token. Set with `LCARS_DEVICE_SECRET` |
+| `LCARS_DEVICE_SECRET` | device token secret | NATS password, and HTTP basic auth for stills and live video. Shown once when the token is created |
 | `SLINT_BACKEND` | `linuxkms-femtovg` | Renderer selection |
 | `SLINT_KMS_ROTATION` | `90` | Mount orientation |
 | `UI_SCALE` | `1.0` | Layout scale for the panel resolution |
