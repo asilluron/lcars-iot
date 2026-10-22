@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+// Reminders are the to-do rows on the display. An admin creates and removes
+// them; a device lists them and marks one done.
+package lcars.v1;
+
+option go_package = "github.com/asilluron/lcars-api/gen/go/lcars/v1;lcarsv1";
+
+// ListRemindersRequest asks for every reminder. Send it as a request on the
+// subject "lcars.reminders.list"; the reply is a ListRemindersResponse. An
+// empty message (or an empty body) is the whole request.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid request, 503 if reminders
+// are not configured, 500 otherwise) and "Nats-Service-Error" (a message).
+message ListRemindersRequest {}
+
+// ListRemindersResponse is the reminder list, oldest first. The display
+// shows at most six.
+message ListRemindersResponse {
+  // When the list last changed, in seconds since the Unix epoch.
+  int64 updated_at_unix = 1;
+  // Every reminder, in the order they were added.
+  repeated Reminder reminders = 2;
+}
+
+// Reminder is one to-do row.
+message Reminder {
+  // "rem_" and 12 lowercase letters or digits.
+  string id = 1;
+  // The words shown on the row.
+  string title = 2;
+  // The smaller line under the title, such as "Due today · House". Empty
+  // if there is none.
+  string detail = 3;
+  // One of "purple", "blue", "orange", "peach".
+  string accent = 4;
+  // True once the row has been marked done.
+  bool done = 5;
+}
+
+// SetReminderRequest marks one reminder done or open. Send it as a request
+// on the subject "lcars.reminders.set"; the reply is a ListRemindersResponse
+// of the list after the change.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid request, 404 if there is no
+// reminder with that id, 503 if reminders are not configured, 500 otherwise)
+// and "Nats-Service-Error" (a message).
+message SetReminderRequest {
+  // The reminder's id.
+  string id = 1;
+  // The done state to store.
+  bool done = 2;
+}
+
+// RemindersUpdated is published on the subject "lcars.reminders.updated"
+// when a reminder is added, removed, or marked done or open. Clients
+// showing the list should request it again.
+message RemindersUpdated {
+  // When the list changed, in seconds since the Unix epoch.
+  int64 updated_at_unix = 1;
+}
