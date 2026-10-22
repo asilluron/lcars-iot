@@ -20,6 +20,13 @@ lcars-ui = { workspace = true }
 voice-proto = { workspace = true }
 cpal = "0.16"
 rodio = { version = "0.21.1", default-features = false, features = ["playback", "tracing"] }
-tokio = { workspace = true }
+image = { version = "0.25.8", default-features = false, features = ["jpeg"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["rustls-tls-native-roots", "stream"] }
+tokio = { workspace = true, features = ["net"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+url = "2.5.7"
+ffmpeg-next = "7.1.0"
+
+[dev-dependencies]
+i-slint-backend-testing = "=1.18.1"

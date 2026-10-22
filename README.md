@@ -25,6 +25,8 @@ cargo run -p lcars-app
 
 The clock is Mountain time (`America/Denver`) until a calendar reply includes the server's timezone. The calendar home is drawn locally until `NATS_URL` is set. With that set, the screen requests `lcars.calendar.get` from lcars-api and refreshes when `lcars.calendar.updated` arrives. A `tls://` URL also needs `NATS_CA_B64` (base64 PEM) or `NATS_CA_FILE` (path to the PEM). The orange status pill shows `LINKING`, `SYNCED`, `NO LINK`, or `NO CALENDAR`. Every control brightens while pressed and plays a short cue from `assets/sounds`. `AUDIO_ENABLED=0` mutes the cues.
 
+Security keeps its lock, home, and away controls. Until `NATS_URL` is set, the two cards under the title are local stand-ins, Front door and Garage. With `NATS_URL`, the screen requests `lcars.cameras.list` and replaces those cards with the cameras lcars-api reports. Stills and the live picture need `LCARS_HTTP_URL`, the origin of that same server, for example `http://192.0.2.10:8080`. The screen opens the `snapshot_path` and `stream_path` from the catalog on that origin. When lcars-api requires a device token, set both `LCARS_DEVICE_USER` and `LCARS_DEVICE_SECRET`. The live view decodes Annex-B with FFmpeg 7, so a build needs `libavcodec`, `libavutil`, and `libswscale`.
+
 The Pi 5 image uses this same binary with `SLINT_BACKEND=linuxkms-femtovg` on the 1024×600 panel. Build it with `balena push <fleet>` from the repo root.
 
 ## Balena
@@ -35,7 +37,7 @@ The Pi 5 image uses this same binary with `SLINT_BACKEND=linuxkms-femtovg` on th
 balena push <fleet>
 ```
 
-Device variables (`SCREEN_ID`, `NATS_URL`, `NATS_CA_B64`, `NATS_CREDS_B64`, and the rest of the spec's bootstrap table) are read once at start. For `NATS_URL=tls://…`, set `NATS_CA_B64` to the base64 of the server's `ca.pem`. Credentials are written to tmpfs under `/run/lcars` and are not baked into the image. `SLINT_BACKEND=linuxkms-femtovg` is set on the service.
+Device variables (`SCREEN_ID`, `NATS_URL`, `NATS_CA_B64`, `NATS_CREDS_B64`, `LCARS_HTTP_URL`, `LCARS_DEVICE_USER`, `LCARS_DEVICE_SECRET`, and the rest of the spec's bootstrap table) are read once at start. For `NATS_URL=tls://…`, set `NATS_CA_B64` to the base64 of the server's `ca.pem`. Credentials are written to tmpfs under `/run/lcars` and are not baked into the image. `SLINT_BACKEND=linuxkms-femtovg` is set on the service.
 
 Button cues are copied to `/opt/lcars/assets`, decoded at startup, and played from memory through an output stream that stays open. The stream asks for a 5 ms period, so a press does not wait on a new player process. On the Pi the stream is ALSA via `/dev/snd`. A USB audio device on the panel is used when one is present; otherwise playback goes to the connected HDMI port. `AUDIO_DEVICE` overrides that choice, for example `plughw:0,0`.
 

@@ -7,15 +7,25 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container: debian:trixie
     steps:
+      - name: Packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl build-essential pkg-config git \
+            libasound2-dev libfontconfig-dev \
+            libavcodec-dev libavutil-dev libswscale-dev
+          curl -fsSL -o /tmp/nats.tar.gz \
+            https://github.com/nats-io/nats-server/releases/download/v2.11.4/nats-server-v2.11.4-linux-amd64.tar.gz
+          tar -C /tmp -xzf /tmp/nats.tar.gz
+          mv /tmp/nats-server-v2.11.4-linux-amd64/nats-server /usr/local/bin/nats-server
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.99.1
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Capture headers
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libasound2-dev
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy

@@ -22,6 +22,13 @@ export struct EventItem {
     accent: color,
 }
 
+export struct CameraCard {
+    sn: string,
+    name: string,
+    still: image,
+    has-still: bool,
+}
+
 component Pressable inherits Rectangle {
     in property <color> accent: Theme.orange;
     in property <bool> selected: false;
@@ -400,6 +407,17 @@ export component HomeScreen inherits Rectangle {
     in-out property <bool> done-2: false;
     in-out property <bool> done-3: true;
     in-out property <bool> show-diagnostics: false;
+    in property <[CameraCard]> cameras: [
+        { sn: "", name: "FRONT DOOR" },
+        { sn: "", name: "GARAGE" },
+    ];
+    in property <string> camera-status: "LOCAL";
+    in property <bool> live-open: false;
+    in property <image> live-image;
+    in property <string> live-name: "";
+    in-out property <int> camera-page: 0;
+    callback open-camera(string);
+    callback close-live();
 
     function lane-open(lane: string) -> bool {
         if (lane == "work") { return root.lane-work; }
@@ -429,8 +447,31 @@ export component HomeScreen inherits Rectangle {
         return Theme.purple;
     }
 
+    function leave-live() {
+        if (root.live-open) {
+            root.close-live();
+        }
+    }
+
+    function camera-accent(index: int) -> color {
+        if (Math.mod(index, 4) == 0) { return Theme.purple; }
+        if (Math.mod(index, 4) == 1) { return Theme.blue; }
+        if (Math.mod(index, 4) == 2) { return Theme.orange; }
+        return Theme.peach;
+    }
+
+    function camera-label(name: string, sn: string) -> string {
+        if (name == "") { return sn; }
+        return name;
+    }
+
     property <string> banner: root.notice == "" ? root.sync-label : root.notice;
     property <string> event-count-label: root.days.length == 0 ? "" : root.days[root.selected-day].count + " EVENTS";
+    property <bool> camera-paging: root.cameras.length > 3;
+    property <int> camera-page-size: root.camera-paging ? 2 : 3;
+    property <int> camera-page-count: Math.max(1, Math.round(Math.ceil(root.cameras.length * 1.0 / root.camera-page-size)));
+    property <int> camera-page-index: Math.mod(root.camera-page, root.camera-page-count);
+    property <string> lock-line: root.locked ? "FRONT DOOR LOCKED" : "FRONT DOOR OPEN";
 
     // Left rail
     RailButton {
@@ -475,7 +516,7 @@ export component HomeScreen inherits Rectangle {
         accent: Theme.peach;
         cream-when-selected: true;
         selected: root.section == 0;
-        clicked => { root.section = 0; root.notice = "CALENDAR 01"; root.pressed("push"); }
+        clicked => { root.leave-live(); root.section = 0; root.notice = "CALENDAR 01"; root.pressed("push"); }
     }
     RailButton {
         x: 12px; y: 332px; width: 128px; height: 68px;
@@ -483,7 +524,7 @@ export component HomeScreen inherits Rectangle {
         accent: Theme.blue;
         cream-when-selected: true;
         selected: root.section == 1;
-        clicked => { root.section = 1; root.notice = "CLIMATE 02"; root.pressed("push-alt"); }
+        clicked => { root.leave-live(); root.section = 1; root.notice = "CLIMATE 02"; root.pressed("push-alt"); }
     }
     RailButton {
         x: 12px; y: 404px; width: 128px; height: 68px;
@@ -491,7 +532,7 @@ export component HomeScreen inherits Rectangle {
         accent: Theme.purple;
         cream-when-selected: true;
         selected: root.section == 2;
-        clicked => { root.section = 2; root.notice = "LIGHTS 03"; root.pressed("alt-2"); }
+        clicked => { root.leave-live(); root.section = 2; root.notice = "LIGHTS 03"; root.pressed("alt-2"); }
     }
     RailButton {
         x: 12px; y: 476px; width: 128px; height: 66px;
@@ -991,15 +1032,161 @@ export component HomeScreen inherits Rectangle {
 
         Text { text: "SECURITY 04"; color: Theme.orange; font-size: 28px; font-weight: 700; }
         Text {
-            y: 48px;
-            text: root.locked ? "FRONT DOOR LOCKED" : "FRONT DOOR OPEN";
-            color: Theme.cream-text;
-            font-size: 28px;
+            y: 40px;
+            width: parent.width - 72px;
+            text: root.lock-line + "  ·  " + (root.camera-status == "LIVE" ? root.live-name : root.camera-status);
+            color: Theme.dim-text;
+            font-size: 14px;
             font-weight: 700;
+            overflow: elide;
+        }
+        Text {
+            y: 40px;
+            width: parent.width;
+            text: "LIVE";
+            horizontal-alignment: right;
+            color: Theme.gold;
+            font-size: 14px;
+            font-weight: 700;
+            visible: root.camera-status == "LIVE";
+        }
+
+        Rectangle {
+            y: 64px;
+            width: 100%;
+            height: 250px;
+
+            if root.live-open: Rectangle {
+                width: 100%;
+                height: 100%;
+                border-radius: 12px;
+                background: Theme.mute;
+                clip: true;
+
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.live-image;
+                    image-fit: contain;
+                }
+
+                Pressable {
+                    x: 0px;
+                    y: parent.height - self.height;
+                    width: 160px;
+                    height: 64px;
+                    radius: 16px;
+                    accent: Theme.peach;
+                    clicked => { root.close-live(); root.pressed("quick"); }
+                    Text {
+                        text: "BACK";
+                        width: 100%;
+                        height: 100%;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        color: Theme.ink;
+                        font-size: 20px;
+                        font-weight: 700;
+                    }
+                }
+            }
+
+            if !root.live-open: Rectangle {
+                width: 100%;
+                height: 100%;
+
+                for card[index] in root.cameras: card-box := Rectangle {
+                    property <int> slot: index - root.camera-page-index * root.camera-page-size;
+                    visible: card-box.slot >= 0 && card-box.slot < root.camera-page-size;
+                    x: card-box.slot * 288px;
+                    width: 276px;
+                    height: 250px;
+
+                    Rectangle {
+                        width: 100%;
+                        height: 174px;
+                        border-radius: 12px;
+                        background: Theme.mute;
+                        clip: true;
+
+                        Image {
+                            width: 100%;
+                            height: 100%;
+                            source: card.still;
+                            image-fit: contain;
+                            visible: card.has-still;
+                        }
+
+                        if !card.has-still: Text {
+                            width: 100%;
+                            height: 100%;
+                            text: "NO STILL";
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            color: Theme.dim-text;
+                            font-size: 14px;
+                            font-weight: 700;
+                        }
+                    }
+
+                    Pressable {
+                        y: 186px;
+                        width: 100%;
+                        height: 64px;
+                        radius: 16px;
+                        accent: root.camera-accent(index);
+                        clicked => {
+                            root.notice = root.camera-label(card.name, card.sn);
+                            if (card.sn == "") {
+                                root.pressed("confirm");
+                            } else {
+                                root.open-camera(card.sn);
+                                root.pressed("confirm");
+                            }
+                        }
+                        Text {
+                            text: root.camera-label(card.name, card.sn);
+                            x: 8px;
+                            width: parent.width - 16px;
+                            height: 100%;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            color: Theme.ink;
+                            font-size: 16px;
+                            font-weight: 700;
+                            overflow: elide;
+                        }
+                    }
+                }
+
+                if root.camera-paging: Pressable {
+                    x: 576px;
+                    y: 186px;
+                    width: 160px;
+                    height: 64px;
+                    radius: 16px;
+                    accent: Theme.gold;
+                    clicked => {
+                        root.camera-page = Math.mod(root.camera-page + 1, root.camera-page-count);
+                        root.notice = "NEXT";
+                        root.pressed("quick");
+                    }
+                    Text {
+                        text: "NEXT";
+                        width: 100%;
+                        height: 100%;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        color: Theme.ink;
+                        font-size: 20px;
+                        font-weight: 700;
+                    }
+                }
+            }
         }
 
         HorizontalLayout {
-            y: 140px;
+            y: 332px;
             height: 88px;
             spacing: 12px;
             Pressable {

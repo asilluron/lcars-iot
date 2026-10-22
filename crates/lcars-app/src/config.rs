@@ -23,6 +23,11 @@ pub struct BootstrapConfig {
     pub audio_enabled: bool,
     pub audio_volume: u8,
     pub log_level: String,
+    /// Origin of lcars-api, such as `http://192.0.2.10:8080`. Empty when stills
+    /// and live video are not configured.
+    pub http_url: Option<String>,
+    pub device_user: Option<String>,
+    pub device_secret: Option<String>,
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -31,6 +36,8 @@ pub enum ConfigError {
     Invalid { name: &'static str, value: String },
     #[error("NATS_URL uses tls but NATS_CA_B64 or NATS_CA_FILE is missing")]
     MissingCa,
+    #[error("LCARS_DEVICE_USER and LCARS_DEVICE_SECRET must both be set")]
+    DeviceToken,
 }
 
 impl BootstrapConfig {
@@ -62,6 +69,11 @@ impl BootstrapConfig {
                 .map(String::as_str)
                 .unwrap_or("22:00-06:00"),
         )?;
+        let device_user = nonempty(vars, "LCARS_DEVICE_USER");
+        let device_secret = nonempty(vars, "LCARS_DEVICE_SECRET");
+        if device_user.is_some() != device_secret.is_some() {
+            return Err(ConfigError::DeviceToken);
+        }
         Ok(Self {
             screen_id: vars
                 .get("SCREEN_ID")
@@ -84,7 +96,24 @@ impl BootstrapConfig {
                 .get("LOG_LEVEL")
                 .cloned()
                 .unwrap_or_else(|| "info".into()),
+            http_url: match nonempty(vars, "LCARS_HTTP_URL") {
+                Some(value) => Some(parse_origin(&value)?),
+                None => None,
+            },
+            device_user,
+            device_secret,
         })
+    }
+
+    #[must_use]
+    pub fn cameras_http(&self) -> Option<crate::cameras::HttpConfig> {
+        self.http_url
+            .as_ref()
+            .map(|base| crate::cameras::HttpConfig {
+                base: base.clone(),
+                user: self.device_user.clone(),
+                secret: self.device_secret.clone(),
+            })
     }
 
     #[must_use]
@@ -102,6 +131,33 @@ impl BootstrapConfig {
             version: env!("CARGO_PKG_VERSION").to_string(),
         })
     }
+}
+
+fn parse_origin(value: &str) -> Result<String, ConfigError> {
+    let url = url::Url::parse(value).map_err(|_| ConfigError::Invalid {
+        name: "LCARS_HTTP_URL",
+        value: value.to_string(),
+    })?;
+    if url.scheme() != "http" && url.scheme() != "https" {
+        return Err(ConfigError::Invalid {
+            name: "LCARS_HTTP_URL",
+            value: value.to_string(),
+        });
+    }
+    if url.host_str().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || !(url.path().is_empty() || url.path() == "/")
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err(ConfigError::Invalid {
+            name: "LCARS_HTTP_URL",
+            value: value.to_string(),
+        });
+    }
+    let origin = url.as_str().trim_end_matches('/');
+    Ok(origin.to_string())
 }
 
 fn nonempty(vars: &HashMap<String, String>, name: &str) -> Option<String> {
@@ -179,6 +235,8 @@ mod tests {
         assert_eq!(config.idle_dim_s, 300);
         assert_eq!(config.night_start_min, 22 * 60);
         assert!(config.to_sync(None, None).is_none());
+        assert!(config.http_url.is_none());
+        assert!(config.device_user.is_none());
 
         let mut vars = HashMap::new();
         vars.insert("NATS_URL".into(), "tls://192.0.2.10:4222".into());
@@ -199,5 +257,32 @@ mod tests {
     #[test]
     fn night_window_wraps() {
         assert_eq!(parse_window("22:00-06:00").unwrap(), (22 * 60, 6 * 60));
+    }
+
+    #[test]
+    fn http_origin_and_device_token_are_paired() {
+        let mut vars = HashMap::new();
+        vars.insert(
+            "LCARS_HTTP_URL".into(),
+            "http://192.0.2.10:8080/cameras".into(),
+        );
+        assert!(matches!(
+            BootstrapConfig::from_map(&vars),
+            Err(ConfigError::Invalid {
+                name: "LCARS_HTTP_URL",
+                ..
+            })
+        ));
+        vars.insert("LCARS_HTTP_URL".into(), "http://192.0.2.10:8080".into());
+        vars.insert("LCARS_DEVICE_USER".into(), "device".into());
+        assert_eq!(
+            BootstrapConfig::from_map(&vars).unwrap_err(),
+            ConfigError::DeviceToken
+        );
+        vars.insert("LCARS_DEVICE_SECRET".into(), "secret".into());
+        let config = BootstrapConfig::from_map(&vars).unwrap();
+        assert_eq!(config.http_url.as_deref(), Some("http://192.0.2.10:8080"));
+        assert_eq!(config.device_user.as_deref(), Some("device"));
+        assert_eq!(config.device_secret.as_deref(), Some("secret"));
     }
 }

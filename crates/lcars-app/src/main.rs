@@ -4,6 +4,7 @@ mod agenda;
 mod audio;
 #[allow(dead_code)]
 mod bridge;
+mod cameras;
 mod clock;
 mod config;
 mod health;
@@ -70,6 +71,9 @@ fn main() {
             screen_id: config.screen_id.clone(),
         };
         let weak = app.as_weak();
+        let http = config.cameras_http();
+        let (commands_tx, commands_rx) = tokio::sync::mpsc::unbounded_channel();
+        cameras::attach(&app, commands_tx);
         std::thread::spawn(move || {
             let runtime = match tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(2)
@@ -82,7 +86,7 @@ fn main() {
                     return;
                 }
             };
-            runtime.block_on(agenda::run(link, weak, voice_cancel));
+            runtime.block_on(agenda::run(link, http, commands_rx, weak, voice_cancel));
         });
     }
 

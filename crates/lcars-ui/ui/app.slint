@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
 import { PanelItem } from "frame.slint";
-import { HomeScreen, DayItem, EventItem } from "home.slint";
+import { HomeScreen, DayItem, EventItem, CameraCard } from "home.slint";
 import { AlertOverlay } from "alert-overlay.slint";
 import { PinPad } from "pin-pad.slint";
 import { DiagnosticsOverlay } from "diagnostics-overlay.slint";
@@ -113,11 +113,21 @@ export component AppWindow inherits Window {
     callback pressed(string);
     callback night-changed(bool);
     callback voice-cancelled();
+    callback open-camera(string);
+    callback close-live();
 
     in-out property <bool> voice-band: false;
     in-out property <string> voice-phase: "";
     in-out property <string> voice-text: "";
     in-out property <bool> voice-offline: false;
+    in-out property <[CameraCard]> cameras: [
+        { sn: "", name: "FRONT DOOR" },
+        { sn: "", name: "GARAGE" },
+    ];
+    in-out property <string> camera-status: "LOCAL";
+    in-out property <bool> live-open: false;
+    in-out property <image> live-image;
+    in-out property <string> live-name: "";
 
     HomeScreen {
         width: 100%;
@@ -133,8 +143,15 @@ export component AppWindow inherits Window {
         events: root.events;
         sync-label: root.status;
         week-label: root.week-label;
+        cameras: root.cameras;
+        camera-status: root.camera-status;
+        live-open: root.live-open;
+        live-image: root.live-image;
+        live-name: root.live-name;
         pressed(kind) => { root.pressed(kind); }
         night-changed(on) => { root.night-changed(on); }
+        open-camera(sn) => { root.open-camera(sn); }
+        close-live => { root.close-live(); }
     }
 
     if root.voice-offline: MicChip {
