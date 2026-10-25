@@ -62,7 +62,10 @@ message CalendarEvent {
   // occurrence of a recurring event has its own ID.
   string id = 1;
   string title = 2;
-  // Name of the calendar the event belongs to.
+  // Name shown for this calendar. An admin-set name if one is set, otherwise
+  // a short source from the file (a mailbox name such as "ada", or "Gmail"),
+  // otherwise the file's X-WR-CALNAME, its top-level subdirectory, or its
+  // file name.
   string calendar = 3;
   // Empty if the event has no location.
   string location = 4;
@@ -78,6 +81,10 @@ message CalendarEvent {
   // End time as "HH:MM" if this timed event ends on this day ("24:00" if it
   // ends at midnight); unset for all-day events and on days before the last.
   optional string end_time = 9;
+  // Lane set for this calendar on the admin page: "work", "band", "personal"
+  // or "house". Empty when none is set; a display then chooses a lane from
+  // the calendar name.
+  string category = 10;
 }
 
 // CalendarUpdated is published on the subject "lcars.calendar.updated" when
