@@ -1,8 +1,9 @@
-//! `lcars.v1` messages for the lcars-api NATS calendar, camera catalog, and
-//! training audio upload.
+//! `lcars.v1` messages for the lcars-api NATS calendar, camera catalog,
+//! reminders, and training audio upload.
 //!
 //! The schemas are `proto/lcars/v1/calendar.proto`,
-//! `proto/lcars/v1/cameras.proto`, and `proto/lcars/v1/training.proto`, copied
+//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/reminders.proto`, and
+//! `proto/lcars/v1/training.proto`, copied
 //! from lcars-api. Subjects and error headers match that server. Video is not
 //! a NATS body: `stream_path` and `snapshot_path` are HTTP paths on the same
 //! server.
@@ -21,6 +22,15 @@ pub const CALENDAR_UPDATED: &str = "lcars.calendar.updated";
 
 /// Request a [`v1::ListCamerasRequest`]; the reply is a [`v1::ListCamerasResponse`].
 pub const CAMERAS_LIST: &str = "lcars.cameras.list";
+
+/// Request a [`v1::ListRemindersRequest`]; the reply is a [`v1::ListRemindersResponse`].
+pub const REMINDERS_LIST: &str = "lcars.reminders.list";
+
+/// Request a [`v1::SetReminderRequest`]; the reply is the list afterwards.
+pub const REMINDERS_SET: &str = "lcars.reminders.set";
+
+/// A [`v1::RemindersUpdated`] is published here when the reminder list changes.
+pub const REMINDERS_UPDATED: &str = "lcars.reminders.updated";
 
 /// Send a [`v1::PutTrainingAudioRequest`]; the reply is a
 /// [`v1::PutTrainingAudioResponse`].
@@ -47,9 +57,12 @@ pub fn decode<T: Message + Default>(bytes: &[u8]) -> Result<T, prost::DecodeErro
 mod tests {
     use super::v1::{
         Camera, GetCalendarRequest, GetCalendarResponse, ListCamerasRequest, ListCamerasResponse,
-        PutTrainingAudioRequest,
+        ListRemindersRequest, PutTrainingAudioRequest, Reminder, SetReminderRequest,
     };
-    use super::{CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, TRAINING_PUT, decode, encode};
+    use super::{
+        CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, REMINDERS_LIST, REMINDERS_SET,
+        REMINDERS_UPDATED, TRAINING_PUT, decode, encode,
+    };
 
     #[test]
     fn calendar_request_round_trips() {
@@ -92,5 +105,20 @@ mod tests {
         let decoded: ListCamerasResponse = decode(&encode(&response)).unwrap();
         assert_eq!(decoded, response);
         assert_eq!(CAMERAS_LIST, "lcars.cameras.list");
+    }
+
+    #[test]
+    fn reminder_round_trips() {
+        let request = SetReminderRequest {
+            id: "rem_7f3k2m9q4x8w".into(),
+            done: true,
+        };
+        let decoded: SetReminderRequest = decode(&encode(&request)).unwrap();
+        assert_eq!(decoded, request);
+        let _ = ListRemindersRequest::default();
+        let _ = Reminder::default();
+        assert_eq!(REMINDERS_LIST, "lcars.reminders.list");
+        assert_eq!(REMINDERS_SET, "lcars.reminders.set");
+        assert_eq!(REMINDERS_UPDATED, "lcars.reminders.updated");
     }
 }

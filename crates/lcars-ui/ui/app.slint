@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
 import { PanelItem } from "frame.slint";
-import { HomeScreen, DayItem, EventItem, CameraCard } from "home.slint";
+import { HomeScreen, DayItem, EventItem, CameraCard, ReminderItem } from "home.slint";
 import { AlertOverlay } from "alert-overlay.slint";
 import { PinPad } from "pin-pad.slint";
 import { DiagnosticsOverlay } from "diagnostics-overlay.slint";
@@ -115,6 +115,12 @@ export component AppWindow inherits Window {
     callback voice-cancelled();
     callback open-camera(string);
     callback close-live();
+    callback reminder-toggled(string);
+
+    in-out property <[ReminderItem]> reminders;
+    in-out property <bool> reminders-live: false;
+    in-out property <int> reminder-open: 0;
+    in-out property <int> reminder-done: 0;
 
     in-out property <bool> voice-band: false;
     in-out property <string> voice-phase: "";
@@ -148,10 +154,15 @@ export component AppWindow inherits Window {
         live-open: root.live-open;
         live-image: root.live-image;
         live-name: root.live-name;
+        reminders: root.reminders;
+        reminders-live: root.reminders-live;
+        reminder-open: root.reminder-open;
+        reminder-done: root.reminder-done;
         pressed(kind) => { root.pressed(kind); }
         night-changed(on) => { root.night-changed(on); }
         open-camera(sn) => { root.open-camera(sn); }
         close-live => { root.close-live(); }
+        reminder-toggled(id) => { root.reminder-toggled(id); }
     }
 
     if root.voice-offline: MicChip {

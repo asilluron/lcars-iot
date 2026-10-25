@@ -22,6 +22,14 @@ export struct EventItem {
     accent: color,
 }
 
+export struct ReminderItem {
+    id: string,
+    title: string,
+    detail: string,
+    accent: string,
+    done: bool,
+}
+
 export struct CameraCard {
     sn: string,
     name: string,
@@ -406,6 +414,11 @@ export component HomeScreen inherits Rectangle {
     in-out property <bool> done-1: false;
     in-out property <bool> done-2: false;
     in-out property <bool> done-3: true;
+    in property <[ReminderItem]> reminders;
+    in property <bool> reminders-live: false;
+    in property <int> reminder-open: 0;
+    in property <int> reminder-done: 0;
+    callback reminder-toggled(string);
     in-out property <bool> show-diagnostics: false;
     in property <[CameraCard]> cameras: [
         { sn: "", name: "FRONT DOOR" },
@@ -444,6 +457,13 @@ export component HomeScreen inherits Rectangle {
         if (lane == "work") { return Theme.blue; }
         if (lane == "band") { return Theme.orange; }
         if (lane == "personal") { return Theme.peach; }
+        return Theme.purple;
+    }
+
+    function reminder-accent(name: string) -> color {
+        if (name == "blue") { return Theme.blue; }
+        if (name == "orange") { return Theme.orange; }
+        if (name == "peach") { return Theme.peach; }
         return Theme.purple;
     }
 
@@ -910,13 +930,13 @@ export component HomeScreen inherits Rectangle {
         Text {
             x: 748px;
             y: 176px;
-            text: "\{root.open-todos()} OPEN · \{root.done-todos()} DONE";
+            text: root.reminders-live ? "\{root.reminder-open} OPEN · \{root.reminder-done} DONE" : "\{root.open-todos()} OPEN · \{root.done-todos()} DONE";
             color: Theme.cream-text;
             font-size: 13px;
             font-weight: 600;
         }
 
-        VerticalLayout {
+        if !root.reminders-live: VerticalLayout {
             x: 684px;
             y: 206px;
             width: 328px;
@@ -948,6 +968,32 @@ export component HomeScreen inherits Rectangle {
                 done: root.done-3;
                 clicked => { root.done-3 = !root.done-3; root.notice = root.done-3 ? "OIL CHANGE DONE" : "OIL CHANGE OPEN"; root.pressed(root.done-3 ? "affirmative" : "push-alt"); }
             }
+        }
+
+        if root.reminders-live: VerticalLayout {
+            x: 684px;
+            y: 206px;
+            width: 328px;
+            for reminder in root.reminders: TodoRow {
+                title: reminder.title;
+                detail: reminder.detail;
+                accent: root.reminder-accent(reminder.accent);
+                done: reminder.done;
+                clicked => {
+                    root.notice = reminder.done ? reminder.title + " OPEN" : reminder.title + " DONE";
+                    root.pressed(reminder.done ? "push-alt" : "affirmative");
+                    root.reminder-toggled(reminder.id);
+                }
+            }
+        }
+
+        if root.reminders-live && root.reminders.length == 0: Text {
+            x: 684px;
+            y: 230px;
+            text: "NONE";
+            color: Theme.dim-text;
+            font-size: 18px;
+            font-weight: 700;
         }
     }
 

@@ -2,6 +2,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let protos = [
         "../../proto/lcars/v1/calendar.proto",
         "../../proto/lcars/v1/cameras.proto",
+        "../../proto/lcars/v1/reminders.proto",
         "../../proto/lcars/v1/training.proto",
     ];
     for proto in protos {
