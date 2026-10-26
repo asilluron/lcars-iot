@@ -1260,8 +1260,8 @@ export component HomeScreen inherits Rectangle {
                 for card[index] in root.cameras: card-box := Rectangle {
                     property <int> slot: index - root.camera-page-index * root.camera-page-size;
                     visible: card-box.slot >= 0 && card-box.slot < root.camera-page-size;
-                    x: card-box.slot * 288px;
-                    width: 276px;
+                    x: card-box.slot * (parent.width / root.camera-page-size);
+                    width: parent.width / root.camera-page-size - 12px;
                     height: 250px;
 
                     Rectangle {
