@@ -589,6 +589,7 @@ export component HomeScreen inherits Rectangle {
     property <string> event-count-label: root.days.length == 0 ? "" : root.days[root.selected-day].count + " EVENTS";
     property <bool> camera-paging: root.cameras.length > 3;
     property <int> camera-page-size: root.camera-paging ? 2 : 3;
+    property <int> camera-columns: root.camera-paging ? root.camera-page-size + 1 : root.camera-page-size;
     property <int> camera-page-count: Math.max(1, Math.round(Math.ceil(root.cameras.length * 1.0 / root.camera-page-size)));
     property <int> camera-page-index: Math.mod(root.camera-page, root.camera-page-count);
     property <string> lock-line: root.locked ? "FRONT DOOR LOCKED" : "FRONT DOOR OPEN";
@@ -1260,8 +1261,8 @@ export component HomeScreen inherits Rectangle {
                 for card[index] in root.cameras: card-box := Rectangle {
                     property <int> slot: index - root.camera-page-index * root.camera-page-size;
                     visible: card-box.slot >= 0 && card-box.slot < root.camera-page-size;
-                    x: card-box.slot * (parent.width / root.camera-page-size);
-                    width: parent.width / root.camera-page-size - 12px;
+                    x: card-box.slot * (parent.width / root.camera-columns);
+                    width: parent.width / root.camera-columns - 12px;
                     height: 250px;
 
                     Rectangle {
@@ -1322,9 +1323,9 @@ export component HomeScreen inherits Rectangle {
                 }
 
                 if root.camera-paging: Pressable {
-                    x: 576px;
+                    x: root.camera-page-size * (parent.width / root.camera-columns);
                     y: 186px;
-                    width: 160px;
+                    width: parent.width / root.camera-columns - 12px;
                     height: 64px;
                     radius: 16px;
                     accent: Theme.gold;
