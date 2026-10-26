@@ -12,6 +12,7 @@ mod health;
 mod power;
 mod reminders;
 mod voice;
+mod weather;
 
 use std::time::Duration;
 
