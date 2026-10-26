@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       pkg-config protobuf-compiler libinput-dev libudev-dev libgbm-dev \
       libdrm-dev libxkbcommon-dev libfontconfig-dev libasound2-dev \
       libavcodec-dev libavformat-dev libavutil-dev libswscale-dev \
+      libclang-dev \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY . .
