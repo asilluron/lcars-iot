@@ -1,9 +1,9 @@
 //! `lcars.v1` messages for the lcars-api NATS calendar, camera catalog,
-//! reminders, and training audio upload.
+//! reminders, training audio upload, and weather.
 //!
 //! The schemas are `proto/lcars/v1/calendar.proto`,
-//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/reminders.proto`, and
-//! `proto/lcars/v1/training.proto`, copied
+//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/reminders.proto`,
+//! `proto/lcars/v1/training.proto`, and `proto/lcars/v1/weather.proto`, copied
 //! from lcars-api. Subjects and error headers match that server. Video is not
 //! a NATS body: `stream_path` and `snapshot_path` are HTTP paths on the same
 //! server.
@@ -36,6 +36,9 @@ pub const REMINDERS_UPDATED: &str = "lcars.reminders.updated";
 /// [`v1::PutTrainingAudioResponse`].
 pub const TRAINING_PUT: &str = "lcars.training.put";
 
+/// Request a [`v1::GetWeatherRequest`]; the reply is a [`v1::GetWeatherResponse`].
+pub const WEATHER_GET: &str = "lcars.weather.get";
+
 /// HTTP-style status on an error reply, such as `"503"`.
 pub const ERROR_CODE: &str = "Nats-Service-Error-Code";
 
@@ -56,12 +59,13 @@ pub fn decode<T: Message + Default>(bytes: &[u8]) -> Result<T, prost::DecodeErro
 #[cfg(test)]
 mod tests {
     use super::v1::{
-        Camera, GetCalendarRequest, GetCalendarResponse, ListCamerasRequest, ListCamerasResponse,
-        ListRemindersRequest, PutTrainingAudioRequest, Reminder, SetReminderRequest,
+        Camera, GetCalendarRequest, GetCalendarResponse, GetWeatherRequest, GetWeatherResponse,
+        ListCamerasRequest, ListCamerasResponse, ListRemindersRequest, PutTrainingAudioRequest,
+        Reminder, SetReminderRequest,
     };
     use super::{
         CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, REMINDERS_LIST, REMINDERS_SET,
-        REMINDERS_UPDATED, TRAINING_PUT, decode, encode,
+        REMINDERS_UPDATED, TRAINING_PUT, WEATHER_GET, decode, encode,
     };
 
     #[test]
@@ -120,5 +124,24 @@ mod tests {
         assert_eq!(REMINDERS_LIST, "lcars.reminders.list");
         assert_eq!(REMINDERS_SET, "lcars.reminders.set");
         assert_eq!(REMINDERS_UPDATED, "lcars.reminders.updated");
+    }
+
+    #[test]
+    fn weather_round_trips() {
+        let request = GetWeatherRequest {};
+        let decoded: GetWeatherRequest = decode(&encode(&request)).unwrap();
+        assert_eq!(decoded, request);
+        let response = GetWeatherResponse {
+            summary: "Clear".into(),
+            temperature_f: 72,
+            feels_like_f: 70,
+            high_f: 78,
+            low_f: 55,
+            wind_mph: 4,
+            observed_at_unix: 1_895_000_000,
+        };
+        let decoded: GetWeatherResponse = decode(&encode(&response)).unwrap();
+        assert_eq!(decoded, response);
+        assert_eq!(WEATHER_GET, "lcars.weather.get");
     }
 }

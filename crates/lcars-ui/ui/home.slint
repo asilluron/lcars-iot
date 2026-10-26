@@ -308,9 +308,103 @@ component TodoRow inherits Rectangle {
     }
 }
 
+component StreamLink inherits Rectangle {
+    in property <string> status: "LINKING";
+    property <int> step: 0;
+    background: #000000bb;
+
+    Timer {
+        interval: 80ms;
+        running: true;
+        triggered => {
+            root.step = Math.mod(root.step + 1, 8);
+        }
+    }
+
+    function hot(index: int) -> bool {
+        Math.mod(root.step + 8 - index, 8) < 3
+    }
+
+    function tone(index: int) -> color {
+        if !root.hot(index) { return Theme.mute; }
+        if index == 0 || index == 4 { return Theme.orange; }
+        if index == 1 || index == 5 { return Theme.peach; }
+        if index == 2 || index == 6 { return Theme.purple; }
+        return Theme.blue;
+    }
+
+    function caption() -> string {
+        if root.status == "RECONNECTING" { return "REACQUIRING SIGNAL"; }
+        if root.status == "LIVE" { return "RECEIVING VISUAL"; }
+        return "ESTABLISHING LINK";
+    }
+
+    Rectangle { x: 12px; y: 12px; width: 36px; height: 6px; background: Theme.orange; }
+    Rectangle { x: 12px; y: 12px; width: 6px; height: 28px; background: Theme.orange; }
+    Rectangle { x: parent.width - 48px; y: 12px; width: 36px; height: 6px; background: Theme.peach; }
+    Rectangle { x: parent.width - 18px; y: 12px; width: 6px; height: 28px; background: Theme.peach; }
+    Rectangle { x: 12px; y: parent.height - 18px; width: 36px; height: 6px; background: Theme.blue; }
+    Rectangle { x: 12px; y: parent.height - 40px; width: 6px; height: 28px; background: Theme.blue; }
+    Rectangle { x: parent.width - 48px; y: parent.height - 18px; width: 36px; height: 6px; background: Theme.purple; }
+    Rectangle { x: parent.width - 18px; y: parent.height - 40px; width: 6px; height: 28px; background: Theme.purple; }
+
+    HorizontalLayout {
+        y: parent.height / 2 - 78px;
+        width: 100%;
+        height: 18px;
+        alignment: center;
+        spacing: 8px;
+
+        Rectangle {
+            width: 8px;
+            height: 8px;
+            y: 5px;
+            border-radius: 2px;
+            background: Math.mod(root.step, 2) == 0 ? Theme.gold : Theme.mute;
+        }
+
+        Text {
+            text: root.caption();
+            color: Theme.orange;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+        }
+    }
+
+    HorizontalLayout {
+        x: 28px;
+        y: parent.height / 2 - 28px;
+        width: parent.width - 56px;
+        height: 22px;
+        spacing: 5px;
+        alignment: center;
+
+        Rectangle { width: 72px; height: 22px; border-radius: 6px; background: root.tone(0); }
+        Rectangle { width: 18px; height: 22px; border-radius: 6px; background: root.tone(1); }
+        Rectangle { width: 48px; height: 22px; border-radius: 6px; background: root.tone(2); }
+        Rectangle { width: 14px; height: 22px; border-radius: 6px; background: root.tone(3); }
+        Rectangle { width: 96px; height: 22px; border-radius: 6px; background: root.tone(4); }
+        Rectangle { width: 28px; height: 22px; border-radius: 6px; background: root.tone(5); }
+        Rectangle { width: 40px; height: 22px; border-radius: 6px; background: root.tone(6); }
+        Rectangle { width: 64px; height: 22px; border-radius: 6px; background: root.tone(7); }
+    }
+
+    Rectangle {
+        x: 28px + (parent.width - 104px) * (root.step * 1.0 / 8);
+        y: parent.height / 2 + 8px;
+        width: 48px;
+        height: 6px;
+        border-radius: 3px;
+        background: Theme.gold;
+    }
+}
+
 component ElbowMark inherits Rectangle {
     callback clicked();
     background: transparent;
+    clip: true;
 
     Rectangle {
         x: 12px;
@@ -362,9 +456,9 @@ component ElbowMark inherits Rectangle {
 
     Rectangle {
         x: 12px;
-        y: 124px;
+        y: 116px;
         width: 128px;
-        height: 44px;
+        height: 36px;
         background: Theme.orange;
     }
 
@@ -402,6 +496,11 @@ export component HomeScreen inherits Rectangle {
     in-out property <bool> lane-house: true;
     in-out property <bool> all-day-on: true;
     in-out property <bool> weather-open: false;
+    in property <string> weather-temp: "--";
+    in property <string> weather-summary: "NO REPORT";
+    in property <string> weather-detail: "";
+    in property <string> weather-range: "";
+    in property <string> weather-wind: "";
     in-out property <string> notice: "";
     in-out property <int> climate-mode: 0;
     in-out property <bool> light-kitchen: true;
@@ -426,6 +525,7 @@ export component HomeScreen inherits Rectangle {
     ];
     in property <string> camera-status: "LOCAL";
     in property <bool> live-open: false;
+    in property <bool> live-frame: false;
     in property <image> live-image;
     in property <string> live-name: "";
     in-out property <int> camera-page: 0;
@@ -608,7 +708,7 @@ export component HomeScreen inherits Rectangle {
     }
 
     weather := Pressable {
-        x: 760px;
+        x: parent.width - 264px;
         y: 16px;
         width: 252px;
         height: 96px;
@@ -616,7 +716,7 @@ export component HomeScreen inherits Rectangle {
         accent: Theme.bg;
         clicked => {
             root.weather-open = !root.weather-open;
-            root.notice = root.weather-open ? "OUTSIDE DETAIL" : "OUTSIDE 54°F";
+            root.notice = root.weather-open ? "OUTSIDE DETAIL" : "OUTSIDE " + root.weather-temp + "°F";
             root.pressed("chirp");
         }
 
@@ -646,7 +746,7 @@ export component HomeScreen inherits Rectangle {
                 Text {
                     width: 64px;
                     height: 100%;
-                    text: "54";
+                    text: root.weather-temp;
                     horizontal-alignment: right;
                     vertical-alignment: center;
                     color: Theme.cream-text;
@@ -673,7 +773,7 @@ export component HomeScreen inherits Rectangle {
 
                 Text {
                     width: 100%;
-                    text: root.weather-open ? "Feels 51°" : "Partly cloudy";
+                    text: root.weather-open ? root.weather-detail : root.weather-summary;
                     color: Theme.cream-text;
                     font-size: 16px;
                     font-weight: 600;
@@ -682,7 +782,7 @@ export component HomeScreen inherits Rectangle {
 
                 Text {
                     width: 100%;
-                    text: root.weather-open ? "Wind 6 mph" : "High 61 · Low 38 °F";
+                    text: root.weather-open ? root.weather-wind : root.weather-range;
                     color: Theme.dim-text;
                     font-size: 13px;
                     overflow: elide;
@@ -998,9 +1098,9 @@ export component HomeScreen inherits Rectangle {
     }
 
     if root.section == 1: Rectangle {
-        x: 160px;
+        x: 236px;
         y: 140px;
-        width: 852px;
+        width: parent.width - 248px;
         height: 440px;
 
         Text { text: "CLIMATE 02"; color: Theme.orange; font-size: 28px; font-weight: 700; }
@@ -1035,9 +1135,9 @@ export component HomeScreen inherits Rectangle {
     }
 
     if root.section == 2: Rectangle {
-        x: 160px;
+        x: 236px;
         y: 140px;
-        width: 852px;
+        width: parent.width - 248px;
         height: 440px;
 
         Text { text: "LIGHTS 03"; color: Theme.orange; font-size: 28px; font-weight: 700; }
@@ -1071,15 +1171,15 @@ export component HomeScreen inherits Rectangle {
     }
 
     if root.section == 3: Rectangle {
-        x: 160px;
-        y: 140px;
-        width: 852px;
-        height: 440px;
+        x: 236px;
+        y: 128px;
+        width: parent.width - 248px;
+        height: parent.height - 140px;
 
         Text { text: "SECURITY 04"; color: Theme.orange; font-size: 28px; font-weight: 700; }
         Text {
-            y: 40px;
-            width: parent.width - 72px;
+            y: 36px;
+            width: parent.width - 56px;
             text: root.lock-line + "  ·  " + (root.camera-status == "LIVE" ? root.live-name : root.camera-status);
             color: Theme.dim-text;
             font-size: 14px;
@@ -1087,7 +1187,7 @@ export component HomeScreen inherits Rectangle {
             overflow: elide;
         }
         Text {
-            y: 40px;
+            y: 36px;
             width: parent.width;
             text: "LIVE";
             horizontal-alignment: right;
@@ -1102,37 +1202,53 @@ export component HomeScreen inherits Rectangle {
             width: 100%;
             height: 250px;
 
-            if root.live-open: Rectangle {
+            if root.live-open: HorizontalLayout {
                 width: 100%;
                 height: 100%;
-                border-radius: 12px;
-                background: Theme.mute;
-                clip: true;
+                spacing: 12px;
 
-                Image {
-                    width: 100%;
+                Rectangle {
+                    width: 160px;
                     height: 100%;
-                    source: root.live-image;
-                    image-fit: contain;
+
+                    Pressable {
+                        y: parent.height - self.height;
+                        width: 160px;
+                        height: 64px;
+                        radius: 16px;
+                        accent: Theme.peach;
+                        clicked => { root.close-live(); root.pressed("quick"); }
+                        Text {
+                            text: "BACK";
+                            width: 100%;
+                            height: 100%;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            color: Theme.ink;
+                            font-size: 20px;
+                            font-weight: 700;
+                        }
+                    }
                 }
 
-                Pressable {
-                    x: 0px;
-                    y: parent.height - self.height;
-                    width: 160px;
-                    height: 64px;
-                    radius: 16px;
-                    accent: Theme.peach;
-                    clicked => { root.close-live(); root.pressed("quick"); }
-                    Text {
-                        text: "BACK";
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 100%;
+                    border-radius: 12px;
+                    background: Theme.mute;
+                    clip: true;
+
+                    Image {
                         width: 100%;
                         height: 100%;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        color: Theme.ink;
-                        font-size: 20px;
-                        font-weight: 700;
+                        source: root.live-image;
+                        image-fit: contain;
+                    }
+
+                    if root.live-open && !root.live-frame && root.camera-status != "NO PICTURE": StreamLink {
+                        width: 100%;
+                        height: 100%;
+                        status: root.camera-status;
                     }
                 }
             }

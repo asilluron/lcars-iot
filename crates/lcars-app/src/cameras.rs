@@ -56,6 +56,7 @@ pub async fn post_status(weak: &Weak<AppWindow>, status: &str) {
             live_open: None,
             live_name: None,
             live_image: None,
+            live_frame: None,
         },
     )
     .await;
@@ -327,6 +328,7 @@ impl Session {
                 live_open: Some(true),
                 live_name: Some(name.clone()),
                 live_image: has_still.then(|| still.clone()),
+                live_frame: Some(false),
             },
         )
         .await;
@@ -369,6 +371,7 @@ impl Session {
                 live_open: Some(false),
                 live_name: None,
                 live_image: None,
+                live_frame: Some(false),
             },
         )
         .await;
@@ -384,6 +387,7 @@ impl Session {
                 live_open: None,
                 live_name: None,
                 live_image: None,
+                live_frame: None,
             },
         )
         .await;
@@ -424,6 +428,7 @@ async fn play(play: Play) {
                         live_open: None,
                         live_name: None,
                         live_image: None,
+                        live_frame: Some(false),
                     },
                 )
                 .await;
@@ -445,6 +450,7 @@ async fn play(play: Play) {
                 live_open: Some(true),
                 live_name: Some(play.name.clone()),
                 live_image: None,
+                live_frame: Some(false),
             },
         )
         .await;
@@ -472,12 +478,14 @@ async fn stream_once(play: &Play, decoder: &mut AnnexDecoder) -> Result<StreamEn
                 live_open: Some(true),
                 live_name: Some(play.name.clone()),
                 live_image: play.has_still.then(|| play.still.clone()),
+                live_frame: Some(false),
             },
         )
         .await;
     }
     let mut body = response.bytes_stream();
     let mut next_paint = Instant::now();
+    let mut saw_frame = false;
     while let Some(chunk) = body.next().await {
         if play.stale() {
             return Ok(StreamEnd::Closed);
@@ -489,6 +497,8 @@ async fn stream_once(play: &Play, decoder: &mut AnnexDecoder) -> Result<StreamEn
         }
         if let Some(frame) = frames.last() {
             next_paint = Instant::now() + FRAME_INTERVAL;
+            let first = !saw_frame;
+            saw_frame = true;
             let _ = post(
                 &play.weak,
                 UiUpdate {
@@ -497,6 +507,7 @@ async fn stream_once(play: &Play, decoder: &mut AnnexDecoder) -> Result<StreamEn
                     live_open: None,
                     live_name: None,
                     live_image: Some(frame.clone()),
+                    live_frame: first.then_some(true),
                 },
             )
             .await;
@@ -512,6 +523,7 @@ struct UiUpdate {
     live_open: Option<bool>,
     live_name: Option<String>,
     live_image: Option<Picture>,
+    live_frame: Option<bool>,
 }
 
 async fn post(weak: &Weak<AppWindow>, update: UiUpdate) -> bool {
@@ -523,6 +535,7 @@ async fn post(weak: &Weak<AppWindow>, update: UiUpdate) -> bool {
             live_open: update.live_open,
             live_name: update.live_name.clone(),
             live_image: update.live_image.clone(),
+            live_frame: update.live_frame,
         };
         if lcars_ui::slint::invoke_from_event_loop(move || apply(&weak, update)).is_ok() {
             return true;
@@ -548,6 +561,9 @@ fn apply(weak: &Weak<AppWindow>, update: UiUpdate) {
     }
     if let Some(image) = update.live_image {
         app.set_live_image(slint_image(&image));
+    }
+    if let Some(frame) = update.live_frame {
+        app.set_live_frame(frame);
     }
     if let Some(cards) = update.cards {
         app.set_cameras(ModelRc::new(VecModel::from(

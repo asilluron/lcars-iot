@@ -91,6 +91,7 @@ pub async fn run(
         commands,
         weak.clone(),
     ));
+    let _weather = tokio::spawn(crate::weather::run(client_rx.clone(), weak.clone()));
     let _reminders = tokio::spawn(crate::reminders::run(client_rx, reminders, weak.clone()));
     crate::cameras::post_status(&weak, "LINKING").await;
     let mut attempt = 0_u32;
