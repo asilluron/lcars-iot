@@ -585,6 +585,16 @@ export component HomeScreen inherits Rectangle {
         return name;
     }
 
+    function open-camera-card(sn: string, name: string) {
+        root.notice = root.camera-label(name, sn);
+        if (sn == "") {
+            root.pressed("confirm");
+            return;
+        }
+        root.open-camera(sn);
+        root.pressed("confirm");
+    }
+
     property <string> banner: root.notice == "" ? root.sync-label : root.notice;
     property <string> event-count-label: root.days.length == 0 ? "" : root.days[root.selected-day].count + " EVENTS";
     property <bool> camera-paging: root.cameras.length > 3;
@@ -1265,30 +1275,36 @@ export component HomeScreen inherits Rectangle {
                     width: parent.width / root.camera-columns - 12px;
                     height: 250px;
 
-                    Rectangle {
+                    TouchArea {
                         width: 100%;
                         height: 174px;
-                        border-radius: 12px;
-                        background: Theme.mute;
-                        clip: true;
+                        clicked => { root.open-camera-card(card.sn, card.name); }
 
-                        Image {
+                        Rectangle {
                             width: 100%;
                             height: 100%;
-                            source: card.still;
-                            image-fit: contain;
-                            visible: card.has-still;
-                        }
+                            border-radius: 12px;
+                            background: Theme.mute;
+                            clip: true;
 
-                        if !card.has-still: Text {
-                            width: 100%;
-                            height: 100%;
-                            text: "NO STILL";
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            color: Theme.dim-text;
-                            font-size: 14px;
-                            font-weight: 700;
+                            Image {
+                                width: 100%;
+                                height: 100%;
+                                source: card.still;
+                                image-fit: contain;
+                                visible: card.has-still;
+                            }
+
+                            if !card.has-still: Text {
+                                width: 100%;
+                                height: 100%;
+                                text: "NO STILL";
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                color: Theme.dim-text;
+                                font-size: 14px;
+                                font-weight: 700;
+                            }
                         }
                     }
 
@@ -1298,15 +1314,7 @@ export component HomeScreen inherits Rectangle {
                         height: 64px;
                         radius: 16px;
                         accent: root.camera-accent(index);
-                        clicked => {
-                            root.notice = root.camera-label(card.name, card.sn);
-                            if (card.sn == "") {
-                                root.pressed("confirm");
-                            } else {
-                                root.open-camera(card.sn);
-                                root.pressed("confirm");
-                            }
-                        }
+                        clicked => { root.open-camera-card(card.sn, card.name); }
                         Text {
                             text: root.camera-label(card.name, card.sn);
                             x: 8px;
