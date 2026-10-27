@@ -19,7 +19,7 @@ use tokio::sync::{mpsc, watch};
 
 const LIVE_MAX_W: u32 = 852;
 const LIVE_MAX_H: u32 = 250;
-const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(15);
+const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(30);
 const STREAM_ATTEMPTS: u32 = 4;
 const FRAME_INTERVAL: Duration = Duration::from_millis(66);
 
@@ -244,9 +244,12 @@ impl Session {
         let Some(media) = self.media.clone() else {
             return;
         };
+        // Keep a still that already landed. Re-fetching every catalog tick
+        // would wake battery cameras when the proxy falls back to a live burst.
         let paths: Vec<(String, String)> = self
             .shown
             .iter()
+            .filter(|shown| !shown.has_still)
             .filter(|shown| self.live_sn.as_deref() != Some(shown.camera.sn.as_str()))
             .map(|shown| (shown.camera.sn.clone(), shown.camera.snapshot_path.clone()))
             .collect();
@@ -279,6 +282,8 @@ impl Session {
                             shown.has_still = true;
                         }
                         self.publish(true).await;
+                    } else {
+                        tracing::warn!(sn = %sn, "camera still was not a JPEG");
                     }
                 }
                 Ok(None) => {
