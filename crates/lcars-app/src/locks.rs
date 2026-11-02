@@ -8,8 +8,8 @@ use lcars_api_proto::v1::{
     ListLocksRequest, ListLocksResponse, LockDoorRequest, UnlockDoorRequest,
 };
 use lcars_api_proto::{ERROR_CODE, LOCKS_LIST, LOCKS_LOCK, LOCKS_UNLOCK};
-use lcars_ui::slint::Weak;
 use lcars_ui::AppWindow;
+use lcars_ui::slint::Weak;
 use tokio::sync::{mpsc, watch};
 
 pub enum Command {
@@ -116,18 +116,22 @@ impl Session {
             return;
         }
         let Some(client) = self.client() else {
+            self.paint().await;
             self.notice("NO LINK").await;
             return;
         };
         let Some(lock) = self.lock.as_ref() else {
+            self.paint().await;
             self.notice("NO LOCK").await;
             return;
         };
         if locked && !lock.can_lock {
+            self.paint().await;
             self.notice("NO LOCK").await;
             return;
         }
         if !locked && !lock.can_unlock {
+            self.paint().await;
             self.notice("NO UNLOCK").await;
             return;
         }
