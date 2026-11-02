@@ -8,8 +8,8 @@ use lcars_api_proto::v1::{
     ListLocksRequest, ListLocksResponse, LockDoorRequest, UnlockDoorRequest,
 };
 use lcars_api_proto::{ERROR_CODE, LOCKS_LIST, LOCKS_LOCK, LOCKS_UNLOCK};
-use lcars_ui::slint::Weak;
 use lcars_ui::AppWindow;
+use lcars_ui::slint::Weak;
 use tokio::sync::{mpsc, watch};
 
 pub enum Command {
