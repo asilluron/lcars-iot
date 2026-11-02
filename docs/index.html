@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home Panel · LCARS IoT</title>
+    <meta
+      name="description"
+      content="Open-source wall panel for the home: native Rust UI on Raspberry Pi 5, Slint rendering, NATS sync, calendar, cameras, voice, and balena fleet updates."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="stylesheet" href="site/styles.css" />
+    <noscript><style>.feature-list li { opacity: 1; transform: none; }</style></noscript>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="shell topbar">
+      <div class="rail" aria-hidden="true"></div>
+      <div class="gap" aria-hidden="true"></div>
+      <a class="mark" href="#top">Home Panel</a>
+      <nav aria-label="Page">
+        <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#start">Start</a>
+        <a href="#docs">Docs</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="shell hero" id="top" aria-labelledby="brand">
+        <div class="hero-copy">
+          <p class="brand" id="brand">Home Panel</p>
+          <h1 class="headline">Wall control for the house, drawn on the glass.</h1>
+          <p class="lede">
+            Native Rust + Slint on a Raspberry Pi 5. House state over NATS. One balena release for every screen.
+          </p>
+          <div class="cta-row">
+            <a class="btn" href="#start">Run it</a>
+            <a class="btn secondary" href="https://github.com/asilluron/lcars-iot">GitHub</a>
+          </div>
+        </div>
+
+        <div class="panel-stage" aria-hidden="true">
+          <svg class="panel-frame" viewBox="0 0 640 380" role="img">
+            <title>Stylized home panel frame</title>
+            <rect width="640" height="380" rx="18" fill="#050303" />
+            <path d="M28 28h180c18 0 28 10 28 28v34H74c-26 0-46-18-46-42V28z" fill="#ff9966" />
+            <rect x="248" y="28" width="280" height="34" rx="17" fill="#ffcc99" />
+            <rect x="540" y="28" width="72" height="34" rx="17" fill="#ff9c34" />
+            <text x="556" y="51" fill="#141414" font-family="Antonio, sans-serif" font-size="14" font-weight="700">SYNCED</text>
+            <rect x="28" y="86" width="92" height="48" rx="12" fill="#cc99cc" />
+            <rect x="28" y="142" width="92" height="48" rx="12" fill="#9999ff" />
+            <rect x="28" y="198" width="92" height="48" rx="12" fill="#fec893" />
+            <rect x="28" y="254" width="92" height="48" rx="12" fill="#c79adf" />
+            <text x="48" y="116" fill="#141414" font-family="Antonio, sans-serif" font-size="16" font-weight="700">HOME</text>
+            <text x="42" y="172" fill="#141414" font-family="Antonio, sans-serif" font-size="16" font-weight="700">SECURE</text>
+            <text x="40" y="228" fill="#141414" font-family="Antonio, sans-serif" font-size="16" font-weight="700">VOICE</text>
+            <text x="44" y="284" fill="#141414" font-family="Antonio, sans-serif" font-size="16" font-weight="700">LIGHTS</text>
+            <rect x="140" y="86" width="472" height="266" rx="16" fill="#0d0a10" stroke="#2a2733" />
+            <text x="164" y="128" fill="#ffe6be" font-family="Antonio, sans-serif" font-size="42" font-weight="700">07:42</text>
+            <text x="164" y="156" fill="#b7a99a" font-family="Antonio, sans-serif" font-size="16" letter-spacing="2">SUN · DENVER · 54°F</text>
+            <rect x="164" y="180" width="120" height="64" rx="12" fill="#ff9c34" />
+            <rect x="296" y="180" width="120" height="64" rx="12" fill="#9999ff" />
+            <rect x="428" y="180" width="152" height="64" rx="12" fill="#75db9a" />
+            <text x="180" y="218" fill="#141414" font-family="Antonio, sans-serif" font-size="18" font-weight="700">CALENDAR</text>
+            <text x="316" y="218" fill="#141414" font-family="Antonio, sans-serif" font-size="18" font-weight="700">TO-DO</text>
+            <text x="456" y="218" fill="#141414" font-family="Antonio, sans-serif" font-size="18" font-weight="700">FORECAST</text>
+            <rect x="164" y="260" width="200" height="70" rx="12" fill="#2a2733" />
+            <rect x="376" y="260" width="200" height="70" rx="12" fill="#2a2733" />
+            <text x="180" y="302" fill="#f3e6d4" font-family="Antonio, sans-serif" font-size="18" font-weight="700">FRONT DOOR</text>
+            <text x="392" y="302" fill="#f3e6d4" font-family="Antonio, sans-serif" font-size="18" font-weight="700">GARAGE CAM</text>
+            <circle cx="560" cy="340" r="4" fill="#75db9a">
+              <animate attributeName="opacity" values="1;0.25;1" dur="2.4s" repeatCount="indefinite" />
+            </circle>
+          </svg>
+        </div>
+      </section>
+
+      <div class="shell divider" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <section class="shell section" id="features" aria-labelledby="features-title">
+        <div class="section-head">
+          <p class="eyebrow">Features</p>
+          <h2 id="features-title">What the panel does</h2>
+          <p>
+            One binary covers desktop and the wall screen. Live house data arrives over NATS; taps send absolute commands and reconcile from JetStream KV.
+          </p>
+        </div>
+        <ol class="feature-list">
+          <li>
+            <span class="code">01</span>
+            <div>
+              <h3>Home agenda</h3>
+              <p>
+                Clock, calendar strip, and event lanes. With <code>NATS_URL</code> set, the panel requests <code>lcars.calendar.get</code> and refreshes on <code>lcars.calendar.updated</code>.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="code">02</span>
+            <div>
+              <h3>Reminders &amp; weather</h3>
+              <p>
+                The to-do column loads <code>lcars.reminders.list</code>; a tap marks an item done. The home readout shows the live forecast from the weather subject.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="code">03</span>
+            <div>
+              <h3>Security &amp; cameras</h3>
+              <p>
+                Lock, home, and away controls. Camera cards come from <code>lcars.cameras.list</code>; stills and live Annex-B video load from <code>LCARS_HTTP_URL</code>.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="code">04</span>
+            <div>
+              <h3>Voice wake on device</h3>
+              <p>
+                A companion <code>voice-daemon</code> service listens on the Pi, streams wake audio over the home NATS hub, and keeps the panel mic status honest.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="code">05</span>
+            <div>
+              <h3>Fleet updates</h3>
+              <p>
+                balenaOS image with LinuxKMS FemtoVG on a 1024×600 panel. Push once; every screen moves together. Layout can still change live from KV.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="code">06</span>
+            <div>
+              <h3>Touch feel</h3>
+              <p>
+                Optimistic taps, pressed brightening, short cues from memory-mapped WAVs, idle dimming, and a status pill for link health.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="shell section" id="architecture" aria-labelledby="arch-title">
+        <div class="section-head">
+          <p class="eyebrow">Architecture</p>
+          <h2 id="arch-title">Screen, broker, backend</h2>
+          <p>
+            The panel never owns device integrations. It watches state, sends commands, and stays up when the network blips.
+          </p>
+        </div>
+
+        <div class="flow">
+          <article>
+            <p class="step">Step 01</p>
+            <h3>Draw first</h3>
+            <p>Boot from a baked layout in under half a second. Status shows CONNECTING until the KV snapshot lands.</p>
+          </article>
+          <article>
+            <p class="step">Step 02</p>
+            <h3>Watch state</h3>
+            <p>JetStream KV delivers entity state. Updates coalesce per frame so a burst never floods the UI thread.</p>
+          </article>
+          <article>
+            <p class="step">Step 03</p>
+            <h3>Command</h3>
+            <p>Taps become absolute request/reply messages. The KV write is source of truth; the reply only closes the round trip.</p>
+          </article>
+        </div>
+
+        <div class="stack" aria-label="Workspace crates">
+          <div class="stack-row">
+            <div class="label">lcars-app</div>
+            <div class="body">Binary: config, audio, backlight, heartbeat, wiring</div>
+          </div>
+          <div class="stack-row">
+            <div class="label">lcars-ui</div>
+            <div class="body">Slint components, theme tokens, home and security panels</div>
+          </div>
+          <div class="stack-row">
+            <div class="label">lcars-sync</div>
+            <div class="body">NATS client, KV watch, command tracker — no UI dependency</div>
+          </div>
+          <div class="stack-row">
+            <div class="label">home-proto</div>
+            <div class="body">Shared <code>home.v1</code> Protobuf types with the Go backend</div>
+          </div>
+          <div class="stack-row">
+            <div class="label">voice-*</div>
+            <div class="body">On-device wake detection and protobuf transport over NATS</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="shell section" id="start" aria-labelledby="start-title">
+        <div class="section-head">
+          <p class="eyebrow">Quick start</p>
+          <h2 id="start-title">Desktop today, Pi when ready</h2>
+          <p>
+            The same <code>lcars-app</code> binary opens a 1024×600 window on macOS/Linux with the winit backend.
+          </p>
+        </div>
+
+        <div class="start">
+          <pre class="terminal"><code>git clone https://github.com/asilluron/lcars-iot.git
+cd lcars-iot
+cargo run -p lcars-app</code></pre>
+
+          <p class="lede" style="margin: 0; max-width: none">
+            Point it at your broker when you have one. TLS needs a CA; device tokens cover both NATS and HTTP media.
+          </p>
+
+          <table class="env-table">
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>NATS_URL</code></td>
+                <td>Broker address. Use <code>tls://…</code> with <code>NATS_CA_B64</code> or <code>NATS_CA_FILE</code>.</td>
+              </tr>
+              <tr>
+                <td><code>LCARS_HTTP_URL</code></td>
+                <td>Origin of lcars-api for camera stills and live video.</td>
+              </tr>
+              <tr>
+                <td><code>LCARS_DEVICE_USER</code> / <code>SECRET</code></td>
+                <td>Device token used as NATS credentials and HTTP basic auth.</td>
+              </tr>
+              <tr>
+                <td><code>AUDIO_ENABLED</code></td>
+                <td>Set <code>0</code> to mute button cues.</td>
+              </tr>
+              <tr>
+                <td><code>SLINT_BACKEND</code></td>
+                <td>On the Pi fleet: <code>linuxkms-femtovg</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <pre class="terminal"><code># Fleet image from the repo root
+balena push &lt;fleet&gt;
+
+# Local checks
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --all-targets --locked
+buf lint</code></pre>
+        </div>
+      </section>
+
+      <section class="shell section" id="docs" aria-labelledby="docs-title">
+        <div class="section-head">
+          <p class="eyebrow">Documentation</p>
+          <h2 id="docs-title">Go deeper</h2>
+          <p>
+            The technical specification is the source of truth for goals, protocol, budgets, and failure modes.
+          </p>
+        </div>
+        <div class="links">
+          <a class="chip" href="https://github.com/asilluron/lcars-iot/blob/main/docs/technical-specification.md">Technical specification</a>
+          <a class="chip alt" href="https://github.com/asilluron/lcars-iot">Source on GitHub</a>
+          <a class="chip soft" href="https://github.com/asilluron/lcars-iot/blob/main/README.md">README</a>
+          <a class="chip soft" href="https://slint.dev">Slint</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell footer">
+      <div class="footer-bar">
+        <p>
+          Original artwork, Antonio under the SIL Open Font License, and no show-derived assets.
+          Open source under the repository license.
+        </p>
+        <p class="sig">LCARS IoT</p>
+      </div>
+    </footer>
+
+    <script src="site/site.js" defer></script>
+  </body>
+</html>

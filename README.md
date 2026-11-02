@@ -1,6 +1,8 @@
 # Home panel
 
-A native Rust panel for a wall screen. It draws an original control surface with [Slint](https://slint.dev), reads house state from NATS JetStream KV, and sends absolute commands over request/reply. The full design is in [docs/technical-specification.md](docs/technical-specification.md).
+A native Rust panel for a wall screen. It draws an original control surface with [Slint](https://slint.dev), reads house state from NATS JetStream KV, and sends absolute commands over request/reply.
+
+**Site:** [asilluron.github.io/lcars-iot](https://asilluron.github.io/lcars-iot/) · **Spec:** [docs/technical-specification.md](docs/technical-specification.md)
 
 The screen binary is `lcars-app`. On a Raspberry Pi 5 it renders with the LinuxKMS FemtoVG backend and no libseat (`backend-linuxkms` plus `backend-linuxkms-libinput`, which is the current form of the spec's `backend-linuxkms-noseat` feature). On a laptop the same binary uses the winit backend.
 
