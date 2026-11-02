@@ -11,7 +11,9 @@ mod health;
 mod locks;
 #[allow(dead_code)]
 mod power;
+mod reminders;
 mod voice;
+mod weather;
 
 use std::time::Duration;
 
@@ -79,6 +81,8 @@ fn main() {
         cameras::attach(&app, commands_tx);
         let (lock_tx, lock_rx) = tokio::sync::mpsc::unbounded_channel();
         locks::attach(&app, lock_tx);
+        let (reminder_tx, reminder_rx) = tokio::sync::mpsc::unbounded_channel();
+        reminders::attach(&app, reminder_tx);
         std::thread::spawn(move || {
             let runtime = match tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(2)
@@ -91,7 +95,15 @@ fn main() {
                     return;
                 }
             };
-            runtime.block_on(agenda::run(link, http, commands_rx, lock_rx, weak, voice_cancel));
+            runtime.block_on(agenda::run(
+                link,
+                http,
+                commands_rx,
+                lock_rx,
+                reminder_rx,
+                weak,
+                voice_cancel,
+            ));
         });
     }
 

@@ -19,7 +19,7 @@ use tokio::sync::{mpsc, watch};
 
 const LIVE_MAX_W: u32 = 852;
 const LIVE_MAX_H: u32 = 250;
-const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(15);
+const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(30);
 const STREAM_ATTEMPTS: u32 = 4;
 const FRAME_INTERVAL: Duration = Duration::from_millis(66);
 
@@ -56,6 +56,7 @@ pub async fn post_status(weak: &Weak<AppWindow>, status: &str) {
             live_open: None,
             live_name: None,
             live_image: None,
+            live_frame: None,
         },
     )
     .await;
@@ -243,9 +244,12 @@ impl Session {
         let Some(media) = self.media.clone() else {
             return;
         };
+        // Keep a still that already landed. Re-fetching every catalog tick
+        // would wake battery cameras when the proxy falls back to a live burst.
         let paths: Vec<(String, String)> = self
             .shown
             .iter()
+            .filter(|shown| !shown.has_still)
             .filter(|shown| self.live_sn.as_deref() != Some(shown.camera.sn.as_str()))
             .map(|shown| (shown.camera.sn.clone(), shown.camera.snapshot_path.clone()))
             .collect();
@@ -278,6 +282,8 @@ impl Session {
                             shown.has_still = true;
                         }
                         self.publish(true).await;
+                    } else {
+                        tracing::warn!(sn = %sn, "camera still was not a JPEG");
                     }
                 }
                 Ok(None) => {
@@ -327,6 +333,7 @@ impl Session {
                 live_open: Some(true),
                 live_name: Some(name.clone()),
                 live_image: has_still.then(|| still.clone()),
+                live_frame: Some(false),
             },
         )
         .await;
@@ -369,6 +376,7 @@ impl Session {
                 live_open: Some(false),
                 live_name: None,
                 live_image: None,
+                live_frame: Some(false),
             },
         )
         .await;
@@ -384,6 +392,7 @@ impl Session {
                 live_open: None,
                 live_name: None,
                 live_image: None,
+                live_frame: None,
             },
         )
         .await;
@@ -424,6 +433,7 @@ async fn play(play: Play) {
                         live_open: None,
                         live_name: None,
                         live_image: None,
+                        live_frame: Some(false),
                     },
                 )
                 .await;
@@ -445,6 +455,7 @@ async fn play(play: Play) {
                 live_open: Some(true),
                 live_name: Some(play.name.clone()),
                 live_image: None,
+                live_frame: Some(false),
             },
         )
         .await;
@@ -472,12 +483,14 @@ async fn stream_once(play: &Play, decoder: &mut AnnexDecoder) -> Result<StreamEn
                 live_open: Some(true),
                 live_name: Some(play.name.clone()),
                 live_image: play.has_still.then(|| play.still.clone()),
+                live_frame: Some(false),
             },
         )
         .await;
     }
     let mut body = response.bytes_stream();
     let mut next_paint = Instant::now();
+    let mut saw_frame = false;
     while let Some(chunk) = body.next().await {
         if play.stale() {
             return Ok(StreamEnd::Closed);
@@ -489,6 +502,8 @@ async fn stream_once(play: &Play, decoder: &mut AnnexDecoder) -> Result<StreamEn
         }
         if let Some(frame) = frames.last() {
             next_paint = Instant::now() + FRAME_INTERVAL;
+            let first = !saw_frame;
+            saw_frame = true;
             let _ = post(
                 &play.weak,
                 UiUpdate {
@@ -497,6 +512,7 @@ async fn stream_once(play: &Play, decoder: &mut AnnexDecoder) -> Result<StreamEn
                     live_open: None,
                     live_name: None,
                     live_image: Some(frame.clone()),
+                    live_frame: first.then_some(true),
                 },
             )
             .await;
@@ -512,6 +528,7 @@ struct UiUpdate {
     live_open: Option<bool>,
     live_name: Option<String>,
     live_image: Option<Picture>,
+    live_frame: Option<bool>,
 }
 
 async fn post(weak: &Weak<AppWindow>, update: UiUpdate) -> bool {
@@ -523,6 +540,7 @@ async fn post(weak: &Weak<AppWindow>, update: UiUpdate) -> bool {
             live_open: update.live_open,
             live_name: update.live_name.clone(),
             live_image: update.live_image.clone(),
+            live_frame: update.live_frame,
         };
         if lcars_ui::slint::invoke_from_event_loop(move || apply(&weak, update)).is_ok() {
             return true;
@@ -548,6 +566,9 @@ fn apply(weak: &Weak<AppWindow>, update: UiUpdate) {
     }
     if let Some(image) = update.live_image {
         app.set_live_image(slint_image(&image));
+    }
+    if let Some(frame) = update.live_frame {
+        app.set_live_frame(frame);
     }
     if let Some(cards) = update.cards {
         app.set_cameras(ModelRc::new(VecModel::from(

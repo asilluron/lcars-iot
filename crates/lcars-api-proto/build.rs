@@ -3,7 +3,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../proto/lcars/v1/calendar.proto",
         "../../proto/lcars/v1/cameras.proto",
         "../../proto/lcars/v1/locks.proto",
+        "../../proto/lcars/v1/reminders.proto",
         "../../proto/lcars/v1/training.proto",
+        "../../proto/lcars/v1/weather.proto",
     ];
     for proto in protos {
         println!("cargo:rerun-if-changed={proto}");

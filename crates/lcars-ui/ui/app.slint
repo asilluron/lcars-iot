@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
 import { PanelItem } from "frame.slint";
-import { HomeScreen, DayItem, EventItem, CameraCard } from "home.slint";
+import { HomeScreen, DayItem, EventItem, CameraCard, ReminderItem } from "home.slint";
 import { AlertOverlay } from "alert-overlay.slint";
 import { PinPad } from "pin-pad.slint";
 import { DiagnosticsOverlay } from "diagnostics-overlay.slint";
@@ -116,6 +116,12 @@ export component AppWindow inherits Window {
     callback open-camera(string);
     callback close-live();
     callback set-lock(bool);
+    callback reminder-toggled(string);
+
+    in-out property <[ReminderItem]> reminders;
+    in-out property <bool> reminders-live: false;
+    in-out property <int> reminder-open: 0;
+    in-out property <int> reminder-done: 0;
 
     in-out property <bool> locked: true;
     in-out property <string> lock-name: "FRONT DOOR";
@@ -130,8 +136,14 @@ export component AppWindow inherits Window {
     ];
     in-out property <string> camera-status: "LOCAL";
     in-out property <bool> live-open: false;
+    in-out property <bool> live-frame: false;
     in-out property <image> live-image;
     in-out property <string> live-name: "";
+    in-out property <string> weather-temp: "--";
+    in-out property <string> weather-summary: "NO REPORT";
+    in-out property <string> weather-detail: "";
+    in-out property <string> weather-range: "";
+    in-out property <string> weather-wind: "";
 
     HomeScreen {
         width: 100%;
@@ -150,16 +162,27 @@ export component AppWindow inherits Window {
         cameras: root.cameras;
         camera-status: root.camera-status;
         live-open: root.live-open;
+        live-frame: root.live-frame;
         live-image: root.live-image;
         live-name: root.live-name;
         locked <=> root.locked;
         lock-name <=> root.lock-name;
         notice <=> root.notice;
+        weather-temp: root.weather-temp;
+        weather-summary: root.weather-summary;
+        weather-detail: root.weather-detail;
+        weather-range: root.weather-range;
+        weather-wind: root.weather-wind;
+        reminders: root.reminders;
+        reminders-live: root.reminders-live;
+        reminder-open: root.reminder-open;
+        reminder-done: root.reminder-done;
         pressed(kind) => { root.pressed(kind); }
         night-changed(on) => { root.night-changed(on); }
         open-camera(sn) => { root.open-camera(sn); }
         close-live => { root.close-live(); }
         set-lock(locked) => { root.set-lock(locked); }
+        reminder-toggled(id) => { root.reminder-toggled(id); }
     }
 
     if root.voice-offline: MicChip {

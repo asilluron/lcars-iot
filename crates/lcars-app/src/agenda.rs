@@ -81,6 +81,7 @@ pub async fn run(
     http: Option<crate::cameras::HttpConfig>,
     commands: tokio::sync::mpsc::UnboundedReceiver<crate::cameras::Command>,
     locks: tokio::sync::mpsc::UnboundedReceiver<crate::locks::Command>,
+    reminders: tokio::sync::mpsc::UnboundedReceiver<String>,
     weak: Weak<AppWindow>,
     voice_cancel: tokio::sync::broadcast::Sender<()>,
 ) {
@@ -91,7 +92,9 @@ pub async fn run(
         commands,
         weak.clone(),
     ));
-    let _locks = tokio::spawn(crate::locks::run(client_rx, locks, weak.clone()));
+    let _locks = tokio::spawn(crate::locks::run(client_rx.clone(), locks, weak.clone()));
+    let _weather = tokio::spawn(crate::weather::run(client_rx.clone(), weak.clone()));
+    let _reminders = tokio::spawn(crate::reminders::run(client_rx, reminders, weak.clone()));
     crate::cameras::post_status(&weak, "LINKING").await;
     let mut attempt = 0_u32;
     let mut had_calendar = false;
@@ -176,6 +179,14 @@ async fn session(
     loop {
         let calendar = fetch(client).await?;
         *had_calendar = true;
+        let events: usize = calendar.days.iter().map(|day| day.events.len()).sum();
+        tracing::info!(
+            from = %calendar.from,
+            to = %calendar.to,
+            days = calendar.days.len(),
+            events,
+            "calendar reply"
+        );
         crate::clock::adopt_server(&calendar.timezone);
         let now = crate::clock::now();
         let model = project(&calendar, now.time());
@@ -256,7 +267,13 @@ async fn post(weak: &Weak<AppWindow>, status: &str, model: Option<AgendaModel>) 
         let model = model.clone();
         if lcars_ui::slint::invoke_from_event_loop(move || {
             if let Some(app) = weak.upgrade() {
+                let events = model.as_ref().map(|model| model.events.len());
                 paint(&app, &status, model);
+                if let Some(events) = events {
+                    tracing::info!(events, status, "calendar painted");
+                }
+            } else {
+                tracing::warn!("calendar update missed the window");
             }
         })
         .is_ok()

@@ -1,9 +1,10 @@
 //! `lcars.v1` messages for the lcars-api NATS calendar, camera catalog,
-//! locks, and training audio upload.
+//! locks, reminders, training audio upload, and weather.
 //!
 //! The schemas are `proto/lcars/v1/calendar.proto`,
-//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/locks.proto`, and
-//! `proto/lcars/v1/training.proto`, copied from lcars-api. Subjects and
+//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/locks.proto`,
+//! `proto/lcars/v1/reminders.proto`, `proto/lcars/v1/training.proto`, and
+//! `proto/lcars/v1/weather.proto`, copied from lcars-api. Subjects and
 //! error headers match that server. Video is not a NATS body:
 //! `stream_path` and `snapshot_path` are HTTP paths on the same server.
 
@@ -31,9 +32,21 @@ pub const LOCKS_LOCK: &str = "lcars.locks.lock";
 /// Send a [`v1::UnlockDoorRequest`]; the reply is a [`v1::UnlockDoorResponse`].
 pub const LOCKS_UNLOCK: &str = "lcars.locks.unlock";
 
+/// Request a [`v1::ListRemindersRequest`]; the reply is a [`v1::ListRemindersResponse`].
+pub const REMINDERS_LIST: &str = "lcars.reminders.list";
+
+/// Request a [`v1::SetReminderRequest`]; the reply is the list afterwards.
+pub const REMINDERS_SET: &str = "lcars.reminders.set";
+
+/// A [`v1::RemindersUpdated`] is published here when the reminder list changes.
+pub const REMINDERS_UPDATED: &str = "lcars.reminders.updated";
+
 /// Send a [`v1::PutTrainingAudioRequest`]; the reply is a
 /// [`v1::PutTrainingAudioResponse`].
 pub const TRAINING_PUT: &str = "lcars.training.put";
+
+/// Request a [`v1::GetWeatherRequest`]; the reply is a [`v1::GetWeatherResponse`].
+pub const WEATHER_GET: &str = "lcars.weather.get";
 
 /// HTTP-style status on an error reply, such as `"503"`.
 pub const ERROR_CODE: &str = "Nats-Service-Error-Code";
@@ -55,13 +68,15 @@ pub fn decode<T: Message + Default>(bytes: &[u8]) -> Result<T, prost::DecodeErro
 #[cfg(test)]
 mod tests {
     use super::v1::{
-        Camera, GetCalendarRequest, GetCalendarResponse, ListCamerasRequest, ListCamerasResponse,
-        ListLocksRequest, ListLocksResponse, Lock, LockDoorRequest, PutTrainingAudioRequest,
-        UnlockDoorRequest,
+        Camera, GetCalendarRequest, GetCalendarResponse, GetWeatherRequest, GetWeatherResponse,
+        ListCamerasRequest, ListCamerasResponse, ListLocksRequest, ListLocksResponse,
+        ListRemindersRequest, Lock, LockDoorRequest, PutTrainingAudioRequest, Reminder,
+        SetReminderRequest, UnlockDoorRequest,
     };
     use super::{
         CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, LOCKS_LIST, LOCKS_LOCK, LOCKS_UNLOCK,
-        TRAINING_PUT, decode, encode,
+        REMINDERS_LIST, REMINDERS_SET, REMINDERS_UPDATED, TRAINING_PUT, WEATHER_GET, decode,
+        encode,
     };
 
     #[test]
@@ -131,9 +146,46 @@ mod tests {
         let unlock = UnlockDoorRequest {
             id: "11111111-1111-1111-1111-111111111111".into(),
         };
-        assert_eq!(decode::<UnlockDoorRequest>(&encode(&unlock)).unwrap(), unlock);
+        assert_eq!(
+            decode::<UnlockDoorRequest>(&encode(&unlock)).unwrap(),
+            unlock
+        );
         assert_eq!(LOCKS_LIST, "lcars.locks.list");
         assert_eq!(LOCKS_LOCK, "lcars.locks.lock");
         assert_eq!(LOCKS_UNLOCK, "lcars.locks.unlock");
+    }
+
+    #[test]
+    fn reminder_round_trips() {
+        let request = SetReminderRequest {
+            id: "rem_7f3k2m9q4x8w".into(),
+            done: true,
+        };
+        let decoded: SetReminderRequest = decode(&encode(&request)).unwrap();
+        assert_eq!(decoded, request);
+        let _ = ListRemindersRequest::default();
+        let _ = Reminder::default();
+        assert_eq!(REMINDERS_LIST, "lcars.reminders.list");
+        assert_eq!(REMINDERS_SET, "lcars.reminders.set");
+        assert_eq!(REMINDERS_UPDATED, "lcars.reminders.updated");
+    }
+
+    #[test]
+    fn weather_round_trips() {
+        let request = GetWeatherRequest {};
+        let decoded: GetWeatherRequest = decode(&encode(&request)).unwrap();
+        assert_eq!(decoded, request);
+        let response = GetWeatherResponse {
+            summary: "Clear".into(),
+            temperature_f: 72,
+            feels_like_f: 70,
+            high_f: 78,
+            low_f: 55,
+            wind_mph: 4,
+            observed_at_unix: 1_895_000_000,
+        };
+        let decoded: GetWeatherResponse = decode(&encode(&response)).unwrap();
+        assert_eq!(decoded, response);
+        assert_eq!(WEATHER_GET, "lcars.weather.get");
     }
 }
