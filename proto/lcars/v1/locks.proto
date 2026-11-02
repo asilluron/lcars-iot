@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package lcars.v1;
+
+option go_package = "github.com/asilluron/lcars-api/gen/go/lcars/v1;lcarsv1";
+
+// ListLocksRequest asks for the smart locks the server can control through
+// Seam. Send it as a request on the subject "lcars.locks.list"; the reply is
+// a ListLocksResponse. An empty message (or an empty body) is the whole
+// request.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid request, 503 if locks are
+// not configured or Seam is unreachable, 500 otherwise) and
+// "Nats-Service-Error" (a message).
+message ListLocksRequest {}
+
+// ListLocksResponse is the locks Seam currently reports. The order is Seam's
+// order.
+message ListLocksResponse {
+  repeated Lock locks = 1;
+}
+
+// Lock is one smart lock from Seam.
+message Lock {
+  // Seam device id (a UUID). Use this with lcars.locks.lock and
+  // lcars.locks.unlock.
+  string id = 1;
+  // Display name from Seam, which may be empty.
+  string name = 2;
+  // True when the lock reports it is locked. False when unlocked, or when
+  // the lock is offline and Seam has no current state.
+  bool locked = 3;
+  // True when Seam reports the lock is online.
+  bool online = 4;
+  // True when this lock can be locked remotely.
+  bool can_lock = 5;
+  // True when this lock can be unlocked remotely.
+  bool can_unlock = 6;
+}
+
+// LockDoorRequest asks the server to lock a door. Send it as a request on
+// the subject "lcars.locks.lock"; the reply is a LockDoorResponse. The
+// server waits for Seam to confirm the action (or fail) before replying.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid id, 404 if Seam has no such
+// lock, 503 if locks are not configured or Seam is unreachable, 504 if
+// Seam did not finish in time, 500 otherwise) and "Nats-Service-Error".
+message LockDoorRequest {
+  // Seam device id from ListLocksResponse.
+  string id = 1;
+}
+
+// LockDoorResponse confirms the lock command finished.
+message LockDoorResponse {
+  // Seam device id that was locked.
+  string id = 1;
+  // Always true after a successful lock.
+  bool locked = 2;
+}
+
+// UnlockDoorRequest asks the server to unlock a door. Send it as a request
+// on the subject "lcars.locks.unlock"; the reply is an UnlockDoorResponse.
+// The server waits for Seam to confirm the action (or fail) before replying.
+//
+// On failure the reply has an empty body and the headers
+// "Nats-Service-Error-Code" (400 for an invalid id, 404 if Seam has no such
+// lock, 503 if locks are not configured or Seam is unreachable, 504 if
+// Seam did not finish in time, 500 otherwise) and "Nats-Service-Error".
+message UnlockDoorRequest {
+  // Seam device id from ListLocksResponse.
+  string id = 1;
+}
+
+// UnlockDoorResponse confirms the unlock command finished.
+message UnlockDoorResponse {
+  // Seam device id that was unlocked.
+  string id = 1;
+  // Always false after a successful unlock.
+  bool locked = 2;
+}
