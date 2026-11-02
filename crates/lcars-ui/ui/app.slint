@@ -115,6 +115,7 @@ export component AppWindow inherits Window {
     callback voice-cancelled();
     callback open-camera(string);
     callback close-live();
+    callback set-lock(bool);
     callback reminder-toggled(string);
 
     in-out property <[ReminderItem]> reminders;
@@ -122,6 +123,9 @@ export component AppWindow inherits Window {
     in-out property <int> reminder-open: 0;
     in-out property <int> reminder-done: 0;
 
+    in-out property <bool> locked: true;
+    in-out property <string> lock-name: "FRONT DOOR";
+    in-out property <string> notice: "";
     in-out property <bool> voice-band: false;
     in-out property <string> voice-phase: "";
     in-out property <string> voice-text: "";
@@ -161,6 +165,9 @@ export component AppWindow inherits Window {
         live-frame: root.live-frame;
         live-image: root.live-image;
         live-name: root.live-name;
+        locked <=> root.locked;
+        lock-name <=> root.lock-name;
+        notice <=> root.notice;
         weather-temp: root.weather-temp;
         weather-summary: root.weather-summary;
         weather-detail: root.weather-detail;
@@ -174,6 +181,7 @@ export component AppWindow inherits Window {
         night-changed(on) => { root.night-changed(on); }
         open-camera(sn) => { root.open-camera(sn); }
         close-live => { root.close-live(); }
+        set-lock(locked) => { root.set-lock(locked); }
         reminder-toggled(id) => { root.reminder-toggled(id); }
     }
 

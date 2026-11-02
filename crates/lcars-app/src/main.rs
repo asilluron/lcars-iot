@@ -8,6 +8,7 @@ mod cameras;
 mod clock;
 mod config;
 mod health;
+mod locks;
 #[allow(dead_code)]
 mod power;
 mod reminders;
@@ -78,6 +79,8 @@ fn main() {
         let http = config.cameras_http();
         let (commands_tx, commands_rx) = tokio::sync::mpsc::unbounded_channel();
         cameras::attach(&app, commands_tx);
+        let (lock_tx, lock_rx) = tokio::sync::mpsc::unbounded_channel();
+        locks::attach(&app, lock_tx);
         let (reminder_tx, reminder_rx) = tokio::sync::mpsc::unbounded_channel();
         reminders::attach(&app, reminder_tx);
         std::thread::spawn(move || {
@@ -96,6 +99,7 @@ fn main() {
                 link,
                 http,
                 commands_rx,
+                lock_rx,
                 reminder_rx,
                 weak,
                 voice_cancel,

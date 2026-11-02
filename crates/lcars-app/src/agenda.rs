@@ -80,6 +80,7 @@ pub async fn run(
     link: AgendaLink,
     http: Option<crate::cameras::HttpConfig>,
     commands: tokio::sync::mpsc::UnboundedReceiver<crate::cameras::Command>,
+    locks: tokio::sync::mpsc::UnboundedReceiver<crate::locks::Command>,
     reminders: tokio::sync::mpsc::UnboundedReceiver<String>,
     weak: Weak<AppWindow>,
     voice_cancel: tokio::sync::broadcast::Sender<()>,
@@ -91,6 +92,7 @@ pub async fn run(
         commands,
         weak.clone(),
     ));
+    let _locks = tokio::spawn(crate::locks::run(client_rx.clone(), locks, weak.clone()));
     let _weather = tokio::spawn(crate::weather::run(client_rx.clone(), weak.clone()));
     let _reminders = tokio::spawn(crate::reminders::run(client_rx, reminders, weak.clone()));
     crate::cameras::post_status(&weak, "LINKING").await;
@@ -397,7 +399,7 @@ pub fn project(calendar: &GetCalendarResponse, now: NaiveTime) -> AgendaModel {
                 detail: detail(event),
                 badge,
                 tag: upper_limit(&event.calendar, 8),
-                lane: lane_of(&event.calendar),
+                lane: event_lane(event),
             });
         }
     }
@@ -464,6 +466,13 @@ fn soon_badge(now: NaiveTime, start: Option<&str>) -> String {
         0 => "NOW".into(),
         1..=SOON_MINUTES => format!("IN {delta} MIN"),
         _ => String::new(),
+    }
+}
+
+fn event_lane(event: &CalendarEvent) -> String {
+    match event.category.as_str() {
+        "work" | "band" | "personal" | "house" => event.category.clone(),
+        _ => lane_of(&event.calendar),
     }
 }
 
@@ -678,6 +687,31 @@ mod tests {
         assert_eq!(view.events[0].tag, "WORK");
         assert_eq!(view.events[0].badge, "IN 30 MIN");
         assert_eq!(view.events[0].detail, "9:00 AM to 9:15 AM · Community park");
+    }
+
+    #[test]
+    fn category_sets_the_lane_and_the_name_is_the_tag() {
+        let calendar = GetCalendarResponse {
+            from: "2030-03-05".into(),
+            days: vec![CalendarDay {
+                date: "2030-03-05".into(),
+                weekday: "Tuesday".into(),
+                events: vec![CalendarEvent {
+                    title: "Pay invoices".into(),
+                    calendar: "ada".into(),
+                    category: "personal".into(),
+                    start_time: Some("15:00".into()),
+                    end_time: Some("16:00".into()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let view = project(&calendar, NaiveTime::from_hms_opt(12, 0, 0).expect("time"));
+        assert_eq!(view.events.len(), 1);
+        assert_eq!(view.events[0].tag, "ADA");
+        assert_eq!(view.events[0].lane, "personal");
     }
 
     #[test]

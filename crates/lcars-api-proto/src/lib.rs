@@ -1,12 +1,12 @@
 //! `lcars.v1` messages for the lcars-api NATS calendar, camera catalog,
-//! reminders, training audio upload, and weather.
+//! locks, reminders, training audio upload, and weather.
 //!
 //! The schemas are `proto/lcars/v1/calendar.proto`,
-//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/reminders.proto`,
-//! `proto/lcars/v1/training.proto`, and `proto/lcars/v1/weather.proto`, copied
-//! from lcars-api. Subjects and error headers match that server. Video is not
-//! a NATS body: `stream_path` and `snapshot_path` are HTTP paths on the same
-//! server.
+//! `proto/lcars/v1/cameras.proto`, `proto/lcars/v1/locks.proto`,
+//! `proto/lcars/v1/reminders.proto`, `proto/lcars/v1/training.proto`, and
+//! `proto/lcars/v1/weather.proto`, copied from lcars-api. Subjects and
+//! error headers match that server. Video is not a NATS body:
+//! `stream_path` and `snapshot_path` are HTTP paths on the same server.
 
 use prost::Message;
 
@@ -22,6 +22,15 @@ pub const CALENDAR_UPDATED: &str = "lcars.calendar.updated";
 
 /// Request a [`v1::ListCamerasRequest`]; the reply is a [`v1::ListCamerasResponse`].
 pub const CAMERAS_LIST: &str = "lcars.cameras.list";
+
+/// Request a [`v1::ListLocksRequest`]; the reply is a [`v1::ListLocksResponse`].
+pub const LOCKS_LIST: &str = "lcars.locks.list";
+
+/// Send a [`v1::LockDoorRequest`]; the reply is a [`v1::LockDoorResponse`].
+pub const LOCKS_LOCK: &str = "lcars.locks.lock";
+
+/// Send a [`v1::UnlockDoorRequest`]; the reply is a [`v1::UnlockDoorResponse`].
+pub const LOCKS_UNLOCK: &str = "lcars.locks.unlock";
 
 /// Request a [`v1::ListRemindersRequest`]; the reply is a [`v1::ListRemindersResponse`].
 pub const REMINDERS_LIST: &str = "lcars.reminders.list";
@@ -60,12 +69,14 @@ pub fn decode<T: Message + Default>(bytes: &[u8]) -> Result<T, prost::DecodeErro
 mod tests {
     use super::v1::{
         Camera, GetCalendarRequest, GetCalendarResponse, GetWeatherRequest, GetWeatherResponse,
-        ListCamerasRequest, ListCamerasResponse, ListRemindersRequest, PutTrainingAudioRequest,
-        Reminder, SetReminderRequest,
+        ListCamerasRequest, ListCamerasResponse, ListLocksRequest, ListLocksResponse,
+        ListRemindersRequest, Lock, LockDoorRequest, PutTrainingAudioRequest, Reminder,
+        SetReminderRequest, UnlockDoorRequest,
     };
     use super::{
-        CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, REMINDERS_LIST, REMINDERS_SET,
-        REMINDERS_UPDATED, TRAINING_PUT, WEATHER_GET, decode, encode,
+        CALENDAR_GET, CALENDAR_UPDATED, CAMERAS_LIST, LOCKS_LIST, LOCKS_LOCK, LOCKS_UNLOCK,
+        REMINDERS_LIST, REMINDERS_SET, REMINDERS_UPDATED, TRAINING_PUT, WEATHER_GET, decode,
+        encode,
     };
 
     #[test]
@@ -109,6 +120,39 @@ mod tests {
         let decoded: ListCamerasResponse = decode(&encode(&response)).unwrap();
         assert_eq!(decoded, response);
         assert_eq!(CAMERAS_LIST, "lcars.cameras.list");
+    }
+
+    #[test]
+    fn lock_messages_round_trip() {
+        let request = ListLocksRequest {};
+        let decoded: ListLocksRequest = decode(&encode(&request)).unwrap();
+        assert_eq!(decoded, request);
+        let response = ListLocksResponse {
+            locks: vec![Lock {
+                id: "11111111-1111-1111-1111-111111111111".into(),
+                name: "Front door".into(),
+                locked: true,
+                online: true,
+                can_lock: true,
+                can_unlock: true,
+            }],
+        };
+        let decoded: ListLocksResponse = decode(&encode(&response)).unwrap();
+        assert_eq!(decoded, response);
+        let lock = LockDoorRequest {
+            id: "11111111-1111-1111-1111-111111111111".into(),
+        };
+        assert_eq!(decode::<LockDoorRequest>(&encode(&lock)).unwrap(), lock);
+        let unlock = UnlockDoorRequest {
+            id: "11111111-1111-1111-1111-111111111111".into(),
+        };
+        assert_eq!(
+            decode::<UnlockDoorRequest>(&encode(&unlock)).unwrap(),
+            unlock
+        );
+        assert_eq!(LOCKS_LIST, "lcars.locks.list");
+        assert_eq!(LOCKS_LOCK, "lcars.locks.lock");
+        assert_eq!(LOCKS_UNLOCK, "lcars.locks.unlock");
     }
 
     #[test]
