@@ -115,7 +115,11 @@ export component AppWindow inherits Window {
     callback voice-cancelled();
     callback open-camera(string);
     callback close-live();
+    callback set-lock(bool);
 
+    in-out property <bool> locked: true;
+    in-out property <string> lock-name: "FRONT DOOR";
+    in-out property <string> notice: "";
     in-out property <bool> voice-band: false;
     in-out property <string> voice-phase: "";
     in-out property <string> voice-text: "";
@@ -148,10 +152,14 @@ export component AppWindow inherits Window {
         live-open: root.live-open;
         live-image: root.live-image;
         live-name: root.live-name;
+        locked <=> root.locked;
+        lock-name <=> root.lock-name;
+        notice <=> root.notice;
         pressed(kind) => { root.pressed(kind); }
         night-changed(on) => { root.night-changed(on); }
         open-camera(sn) => { root.open-camera(sn); }
         close-live => { root.close-live(); }
+        set-lock(locked) => { root.set-lock(locked); }
     }
 
     if root.voice-offline: MicChip {

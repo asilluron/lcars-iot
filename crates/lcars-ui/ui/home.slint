@@ -401,6 +401,7 @@ export component HomeScreen inherits Rectangle {
     in-out property <bool> light-porch: true;
     in-out property <bool> light-hall: false;
     in-out property <bool> locked: true;
+    in-out property <string> lock-name: "FRONT DOOR";
     in-out property <bool> away: false;
     in-out property <bool> done-0: false;
     in-out property <bool> done-1: false;
@@ -418,6 +419,7 @@ export component HomeScreen inherits Rectangle {
     in-out property <int> camera-page: 0;
     callback open-camera(string);
     callback close-live();
+    callback set-lock(bool);
 
     function lane-open(lane: string) -> bool {
         if (lane == "work") { return root.lane-work; }
@@ -471,7 +473,7 @@ export component HomeScreen inherits Rectangle {
     property <int> camera-page-size: root.camera-paging ? 2 : 3;
     property <int> camera-page-count: Math.max(1, Math.round(Math.ceil(root.cameras.length * 1.0 / root.camera-page-size)));
     property <int> camera-page-index: Math.mod(root.camera-page, root.camera-page-count);
-    property <string> lock-line: root.locked ? "FRONT DOOR LOCKED" : "FRONT DOOR OPEN";
+    property <string> lock-line: root.lock-name + (root.locked ? " LOCKED" : " OPEN");
 
     // Left rail
     RailButton {
@@ -1192,7 +1194,12 @@ export component HomeScreen inherits Rectangle {
             Pressable {
                 width: 280px; radius: 20px;
                 accent: root.locked ? Theme.purple : Theme.orange;
-                clicked => { root.locked = !root.locked; root.notice = root.locked ? "LOCKED" : "UNLOCKED"; root.pressed(root.locked ? "confirm" : "affirmative"); }
+                clicked => {
+                    root.locked = !root.locked;
+                    root.notice = root.locked ? "LOCKED" : "UNLOCKED";
+                    root.set-lock(root.locked);
+                    root.pressed(root.locked ? "confirm" : "affirmative");
+                }
                 Text {
                     text: root.locked ? "LOCKED" : "UNLOCKED";
                     width: 100%; height: 100%;
