@@ -116,18 +116,22 @@ impl Session {
             return;
         }
         let Some(client) = self.client() else {
+            self.paint().await;
             self.notice("NO LINK").await;
             return;
         };
         let Some(lock) = self.lock.as_ref() else {
+            self.paint().await;
             self.notice("NO LOCK").await;
             return;
         };
         if locked && !lock.can_lock {
+            self.paint().await;
             self.notice("NO LOCK").await;
             return;
         }
         if !locked && !lock.can_unlock {
+            self.paint().await;
             self.notice("NO UNLOCK").await;
             return;
         }

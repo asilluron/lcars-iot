@@ -1366,10 +1366,9 @@ export component HomeScreen inherits Rectangle {
                 width: 280px; radius: 20px;
                 accent: root.locked ? Theme.purple : Theme.orange;
                 clicked => {
-                    root.locked = !root.locked;
-                    root.notice = root.locked ? "LOCKED" : "UNLOCKED";
-                    root.set-lock(root.locked);
-                    root.pressed(root.locked ? "confirm" : "affirmative");
+                    // Desired state only; locks.rs paints LOCKING/LOCKED (or reverts).
+                    root.set-lock(!root.locked);
+                    root.pressed(root.locked ? "affirmative" : "confirm");
                 }
                 Text {
                     text: root.locked ? "LOCKED" : "UNLOCKED";
