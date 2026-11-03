@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 600" role="img">
+  <title>Home panel calendar screen</title>
+  <rect width="1024" height="600" fill="#000000"/>
+
+  <rect x="12" y="12" width="128" height="76" rx="12" fill="#c79adf"/>
+  <text x="124" y="28" text-anchor="end" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">DISPLAY</text>
+  <text x="124" y="62" text-anchor="end" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="22" font-weight="700">NIGHT</text>
+
+  <path fill="#ff9c34" d="M12 92h128v40h80v48H140v64H12z"/>
+
+  <rect x="12" y="260" width="128" height="68" rx="12" fill="#fec893"/>
+  <text x="20" y="276" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="11" font-weight="700">01</text>
+  <text x="124" y="304" text-anchor="end" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">CALENDAR</text>
+  <rect x="12" y="332" width="128" height="68" rx="12" fill="#9ba4ff"/>
+  <text x="20" y="348" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="11" font-weight="700">02</text>
+  <text x="124" y="376" text-anchor="end" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">CLIMATE</text>
+  <rect x="12" y="404" width="128" height="68" rx="12" fill="#c79adf"/>
+  <text x="20" y="420" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="11" font-weight="700">03</text>
+  <text x="124" y="448" text-anchor="end" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">LIGHTS</text>
+  <rect x="12" y="476" width="128" height="66" rx="12" fill="#9ba4ff"/>
+  <text x="20" y="492" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="11" font-weight="700">04</text>
+  <text x="124" y="520" text-anchor="end" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">SECURITY</text>
+  <rect x="12" y="548" width="128" height="40" rx="10" fill="#ff9c34"/>
+
+  <text x="156" y="88" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="92" font-weight="700">07:42</text>
+  <text x="360" y="84" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="16" font-weight="700">AM</text>
+  <text x="420" y="58" fill="#ff9c34" font-family="Antonio, Arial Narrow, sans-serif" font-size="26" font-weight="700">MONDAY</text>
+  <text x="420" y="84" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="15" font-weight="600">2 NOVEMBER 2026</text>
+
+  <text x="1008" y="28" text-anchor="end" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">OUTSIDE</text>
+  <text x="840" y="90" text-anchor="end" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="52" font-weight="700">54</text>
+  <text x="848" y="58" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="13" font-weight="700">°F</text>
+  <text x="1008" y="72" text-anchor="end" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="16" font-weight="600">PARTLY CLOUDY</text>
+  <text x="1008" y="94" text-anchor="end" fill="#b7a99a" font-family="Antonio, Arial Narrow, sans-serif" font-size="14">48° / 61°</text>
+
+  <rect x="156" y="120" width="72" height="64" rx="14" fill="#ff9c34"/>
+  <text x="168" y="146" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="26" font-weight="700">02</text>
+  <text x="168" y="168" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">MON</text>
+  <rect x="236" y="120" width="72" height="64" rx="14" fill="#9ba4ff"/>
+  <text x="248" y="146" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="26" font-weight="700">03</text>
+  <text x="248" y="168" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">TUE</text>
+  <rect x="316" y="120" width="72" height="64" rx="14" fill="#fec893"/>
+  <text x="328" y="146" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="26" font-weight="700">04</text>
+  <text x="328" y="168" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">WED</text>
+  <rect x="396" y="120" width="72" height="64" rx="14" fill="#c79adf"/>
+  <text x="408" y="146" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="26" font-weight="700">05</text>
+  <text x="408" y="168" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">THU</text>
+  <rect x="476" y="120" width="72" height="64" rx="14" fill="#75db9a"/>
+  <text x="488" y="146" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="26" font-weight="700">06</text>
+  <text x="488" y="168" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="12" font-weight="700">FRI</text>
+
+  <rect x="860" y="120" width="148" height="36" rx="18" fill="#ff9c34"/>
+  <text x="934" y="144" text-anchor="middle" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="16" font-weight="700">LOCAL</text>
+
+  <rect x="156" y="204" width="520" height="44" rx="8" fill="#2a2733"/>
+  <rect x="156" y="204" width="10" height="44" rx="4" fill="#9ba4ff"/>
+  <text x="180" y="232" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">09:00  STANDUP</text>
+  <text x="420" y="232" fill="#b7a99a" font-family="Antonio, Arial Narrow, sans-serif" font-size="14">WORK · DAILY SYNC</text>
+  <rect x="156" y="256" width="520" height="44" rx="8" fill="#2a2733"/>
+  <rect x="156" y="256" width="10" height="44" rx="4" fill="#ff9c34"/>
+  <text x="180" y="284" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">12:30  LUNCH RUN</text>
+  <text x="420" y="284" fill="#b7a99a" font-family="Antonio, Arial Narrow, sans-serif" font-size="14">BAND · PRACTICE</text>
+  <rect x="156" y="308" width="520" height="44" rx="8" fill="#2a2733"/>
+  <rect x="156" y="308" width="10" height="44" rx="4" fill="#fec893"/>
+  <text x="180" y="336" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">18:00  DINNER</text>
+  <text x="420" y="336" fill="#b7a99a" font-family="Antonio, Arial Narrow, sans-serif" font-size="14">PERSONAL · HOME</text>
+
+  <text x="720" y="220" fill="#ffcc99" font-family="Antonio, Arial Narrow, sans-serif" font-size="14" font-weight="700">TO-DO</text>
+  <rect x="720" y="232" width="288" height="40" rx="8" fill="#2a2733"/>
+  <circle cx="740" cy="252" r="8" fill="none" stroke="#9ba4ff" stroke-width="2"/>
+  <text x="760" y="258" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="16" font-weight="600">Bring bins in</text>
+  <rect x="720" y="280" width="288" height="40" rx="8" fill="#2a2733"/>
+  <circle cx="740" cy="300" r="8" fill="none" stroke="#ff9c34" stroke-width="2"/>
+  <text x="760" y="306" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="16" font-weight="600">Charge bikes</text>
+  <rect x="720" y="328" width="288" height="40" rx="8" fill="#2a2733"/>
+  <circle cx="740" cy="348" r="8" fill="#75db9a"/>
+  <text x="760" y="354" fill="#b7a99a" font-family="Antonio, Arial Narrow, sans-serif" font-size="16" font-weight="600">Water plants</text>
+
+  <rect x="156" y="500" width="280" height="72" rx="12" fill="#2a2733"/>
+  <text x="176" y="544" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">FRONT DOOR</text>
+  <rect x="452" y="500" width="280" height="72" rx="12" fill="#2a2733"/>
+  <text x="472" y="544" fill="#f3e6d4" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">GARAGE</text>
+  <rect x="748" y="500" width="260" height="72" rx="12" fill="#ff9c34"/>
+  <text x="768" y="544" fill="#141414" font-family="Antonio, Arial Narrow, sans-serif" font-size="18" font-weight="700">FRONT DOOR LOCKED</text>
+</svg>
